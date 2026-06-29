@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sınav Asistanı</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --border: #E4E6EA;
+    --text: #1A1D23;
+    --text-muted: #6B7280;
+    --text-light: #9CA3AF;
+    --primary: #2563EB;
+    --primary-light: #EFF6FF;
+    --primary-dark: #1D4ED8;
+    --green: #16A34A;
+    --green-light: #F0FDF4;
+    --green-muted: #DCFCE7;
+    --amber: #D97706;
+    --amber-light: #FFFBEB;
+    --amber-muted: #FEF3C7;
+    --purple: #7C3AED;
+    --purple-light: #F5F3FF;
+    --red: #DC2626;
+    --red-light: #FFF1F2;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 1px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --sidebar-width: 220px;
+    --nav-height: 60px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  
+  /* ── LAYOUT ────────────────────────────────── */
+  .app-shell { display: flex; min-height: 100vh; }
+  .sidebar { width: var(--sidebar-width); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; padding: 20px 0; }
+  .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .sidebar-logo .logo-mark { font-size: 22px; font-weight: 700; color: var(--primary); letter-spacing: -0.5px; }
+  .sidebar-logo .logo-sub { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: var(--text-muted); cursor: pointer; border-radius: 0; transition: all .15s; font-weight: 500; font-size: 13.5px; border-left: 3px solid transparent; }
+  .nav-item:hover { color: var(--primary); background: var(--primary-light); }
+  .nav-item.active { color: var(--primary); background: var(--primary-light); border-left-color: var(--primary); }
+  .nav-item i { font-size: 18px; }
+  .sidebar-bottom { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .user-chip { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 8px; border-radius: var(--radius); transition: background .15s; }
+  .user-chip:hover { background: var(--bg); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-info .name { font-weight: 600; font-size: 13px; truncate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-info .sinav { font-size: 11px; color: var(--text-muted); }
+
+  .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 32px; min-height: 100vh; }
+
+  /* Mobile nav */
+  .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); height: var(--nav-height); z-index: 100; }
+  .mobile-nav-inner { display: flex; height: 100%; }
+  .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--text-muted); font-size: 10px; font-weight: 500; transition: color .15s; border: none; background: none; }
+  .mobile-nav-item i { font-size: 20px; }
+  .mobile-nav-item.active { color: var(--primary); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main-content { margin-left: 0; padding: 16px 16px calc(var(--nav-height) + 16px); }
+    .mobile-nav { display: block; }
+  }
+
+  /* ── SCREENS ────────────────────────────────── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── SETUP SCREEN ────────────────────────────── */
+  .center-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .setup-card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 40px; max-width: 420px; width: 100%; margin: 20px; }
+  .setup-logo { text-align: center; margin-bottom: 28px; }
+  .setup-logo .big-logo { font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -1px; }
+  .setup-logo .tagline { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+  .step-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); transition: border-color .15s; outline: none; }
+  .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+  .form-input::placeholder { color: var(--text-light); }
+  .form-select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; cursor: pointer; }
+  .form-select:focus { border-color: var(--primary); }
+  .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  
+  /* ── BUTTONS ────────────────────────────────── */
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; font-family: inherit; text-decoration: none; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+  .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover:not(:disabled) { background: var(--bg); }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover:not(:disabled) { background: #15803D; }
+  .btn-amber { background: var(--amber); color: #fff; }
+  .btn-amber:hover:not(:disabled) { background: #B45309; }
+  .btn-ghost { background: transparent; color: var(--text-muted); }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+  .btn-full { width: 100%; justify-content: center; padding: 11px; }
+  .btn-lg { padding: 13px 24px; font-size: 15px; border-radius: var(--radius); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-icon { padding: 8px; border-radius: var(--radius-sm); }
+  .google-btn { background: #fff; color: #374151; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+  .google-btn:hover { background: #F9FAFB; }
+  .google-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+  /* ── CARDS ────────────────────────────────── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
+  .card-sm { padding: 16px; border-radius: var(--radius); }
+  
+  /* ── BADGES ────────────────────────────────── */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-green { background: var(--green-muted); color: var(--green); }
+  .badge-amber { background: var(--amber-muted); color: var(--amber); }
+  .badge-blue { background: var(--primary-light); color: var(--primary); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+  .badge-gray { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* ── DASHBOARD ────────────────────────────────── */
+  .page-header { margin-bottom: 24px; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  @media (max-width: 900px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .metrics-grid { grid-template-columns: 1fr 1fr; } }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); }
+  .metric-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .metric-value.green { color: var(--green); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.blue { color: var(--primary); }
+  .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+  .section-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .chart-container { position: relative; height: 220px; }
+  .remind-list { display: flex; flex-direction: column; gap: 10px; }
+  .remind-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all .15s; background: var(--surface); }
+  .remind-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  .remind-thumb { width: 48px; height: 48px; border-radius: var(--radius-sm); overflow: hidden; background: var(--bg); flex-shrink: 0; }
+  .remind-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .remind-info { flex: 1; min-width: 0; }
+  .remind-topic { font-size: 13px; font-weight: 500; }
+  .remind-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .empty-state { text-align: center; padding: 32px; color: var(--text-muted); }
+  .empty-state i { font-size: 40px; margin-bottom: 8px; opacity: 0.3; display: block; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── UPLOAD SCREEN ────────────────────────────────── */
+  .upload-area { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 60px 30px; text-align: center; cursor: pointer; transition: all .2s; }
+  .upload-area:hover, .upload-area.drag-over { border-color: var(--primary); background: var(--primary-light); }
+  .upload-area i { font-size: 48px; color: var(--text-light); margin-bottom: 12px; display: block; }
+  .upload-area.drag-over i { color: var(--primary); }
+  .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .upload-sub { font-size: 13px; color: var(--text-muted); }
+  .upload-progress { display: none; }
+  .progress-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .progress-step { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
+  .progress-step .step-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; background: var(--bg); color: var(--text-muted); }
+  .progress-step.active .step-icon { background: var(--primary-light); color: var(--primary); }
+  .progress-step.done .step-icon { background: var(--green-muted); color: var(--green); }
+  .progress-step.error .step-icon { background: var(--red-light); color: var(--red); }
+  .step-text { flex: 1; font-size: 13px; font-weight: 500; }
+  .step-status { font-size: 12px; color: var(--text-muted); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--primary); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .preview-img { max-width: 100%; max-height: 200px; border-radius: var(--radius); margin-top: 16px; border: 1px solid var(--border); }
+
+  /* ── ARCHIVE SCREEN ────────────────────────────────── */
+  .archive-layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
+  @media (max-width: 768px) { .archive-layout { grid-template-columns: 1fr; } }
+  .folder-tree { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; height: fit-content; position: sticky; top: 20px; }
+  .tree-item { padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); transition: all .15s; }
+  .tree-item:hover { background: var(--bg); color: var(--text); }
+  .tree-item.active { background: var(--primary-light); color: var(--primary); font-weight: 500; }
+  .tree-item .tree-count { margin-left: auto; font-size: 11px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 1px 7px; color: var(--text-muted); }
+  .tree-children { padding-left: 20px; }
+  .archive-stats { display: flex; gap: 16px; margin-bottom: 16px; font-size: 12px; color: var(--text-muted); align-items: center; }
+  .archive-stats strong { color: var(--text); }
+  .archive-search { margin-bottom: 16px; position: relative; }
+  .archive-search input { width: 100%; padding: 9px 36px 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; font-family: inherit; background: var(--surface); }
+  .archive-search input:focus { border-color: var(--primary); }
+  .archive-search i { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+  .questions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  @media (max-width: 480px) { .questions-grid { grid-template-columns: 1fr 1fr; } }
+  .question-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all .15s; }
+  .question-card:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .question-thumb { width: 100%; height: 120px; background: var(--bg); overflow: hidden; position: relative; }
+  .question-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .question-thumb .no-img { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-size: 32px; }
+  .question-body { padding: 10px; }
+  .question-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+  .question-footer { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); }
+  .question-footer .counter { display: flex; align-items: center; gap: 3px; }
+
+  /* ── DETAIL SCREEN ────────────────────────────────── */
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+  .breadcrumb a { color: var(--text-muted); text-decoration: none; cursor: pointer; }
+  .breadcrumb a:hover { color: var(--primary); }
+  .breadcrumb i { font-size: 14px; }
+  .detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .detail-layout { grid-template-columns: 1fr; } }
+  .question-image-container { position: relative; }
+  .question-image-container img { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); cursor: zoom-in; }
+  .solution-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .solution-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .solution-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .info-box { border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 10px; }
+  .info-box i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .info-box.blue { background: var(--primary-light); color: #1E40AF; }
+  .info-box.purple { background: var(--purple-light); border-left: 3px solid var(--purple); color: #5B21B6; }
+  .info-box.green { background: var(--green-light); color: var(--green); }
+  .info-box.amber { background: var(--amber-light); color: #92400E; }
+  .info-box.gray { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+  .info-box .box-content { flex: 1; }
+  .info-box .box-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; margin-bottom: 4px; }
+  .info-box .box-text { font-size: 13px; line-height: 1.5; }
+  .steps-section { }
+  .steps-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .step-item { display: flex; gap: 10px; margin-bottom: 10px; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-content { flex: 1; font-size: 13px; line-height: 1.6; padding-top: 2px; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .15s; color: var(--text-muted); }
+  .tag:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+  .detail-actions { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .action-spacer { flex: 1; }
+  .counters { display: flex; gap: 14px; }
+  .counter-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+  .btn-learned.active { background: var(--green); color: #fff; }
+
+  /* ── CHAT PANEL ────────────────────────────────── */
+  .chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200; display: none; }
+  .chat-panel { position: fixed; bottom: 0; left: 0; right: 0; height: 70vh; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-md); z-index: 201; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); }
+  .chat-panel.open { transform: translateY(0); }
+  .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .chat-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
+  .chat-summary { padding: 12px 20px; background: var(--primary-light); border-bottom: 1px solid var(--border); font-size: 12px; color: #1E40AF; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
+  .chat-bubble.user { background: var(--primary); color: #fff; align-self: flex-end; border-radius: 14px 14px 3px 14px; }
+  .chat-bubble.ai { background: var(--bg); border: 1px solid var(--border); align-self: flex-start; border-radius: 14px 14px 14px 3px; }
+  .chat-bubble.thinking { color: var(--text-muted); font-style: italic; }
+  .chat-input-row { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .chat-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; outline: none; resize: none; height: 42px; }
+  .chat-input:focus { border-color: var(--primary); }
+
+  /* ── LIGHTBOX ────────────────────────────────── */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius); }
+
+  /* ── ANALYTICS SCREEN ────────────────────────────────── */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 768px) { .analytics-grid { grid-template-columns: 1fr; } }
+  .analytics-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .analytics-table th { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); cursor: pointer; user-select: none; white-space: nowrap; }
+  .analytics-table th:hover { color: var(--text); }
+  .analytics-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); }
+  .analytics-table tr:last-child td { border-bottom: none; }
+  .analytics-table tr:hover td { background: var(--bg); }
+  .progress-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width .3s; }
+  .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .summary-cards { grid-template-columns: 1fr 1fr; } }
+  
+  /* ── PROFILE SCREEN ────────────────────────────────── */
+  .profile-card { max-width: 480px; }
+
+  /* ── TOAST ────────────────────────────────── */
+  .toast-container { position: fixed; top: 20px; right: 20px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }
+  .toast { background: var(--text); color: #fff; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 10px; min-width: 260px; animation: slideIn .2s ease; }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ── OFFLINE BANNER ────────────────────────────────── */
+  .offline-banner { position: fixed; top: 0; left: 0; right: 0; background: var(--amber); color: #7C2D12; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; z-index: 999; display: none; }
+  .offline-banner.show { display: block; }
+
+  /* ── LOADING ────────────────────────────────── */
+  .full-loader { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 14px; }
+  .full-loader .spinner { width: 36px; height: 36px; border-width: 3px; }
+  .full-loader p { font-size: 14px; color: var(--text-muted); }
+  .skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ── SVG container ── */
+  .svg-container { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; background: var(--bg); overflow: auto; }
+  .svg-container svg { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<!-- OFFLINE BANNER -->
+<div class="offline-banner" id="offlineBanner">
+  <i class="ti ti-wifi-off"></i> Çevrimdışısınız — bağlantı bekleniyor...
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-overlay" id="chatOverlay" onclick="closeChat()"></div>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <i class="ti ti-message-circle" style="color: var(--primary); font-size: 18px;"></i>
+    <h3>Soru Sor</h3>
+    <button class="btn btn-ghost btn-icon" onclick="closeChat()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="chat-summary" id="chatSummary"></div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <textarea class="chat-input" id="chatInput" placeholder="Aklında takılan bir şey mi var?" onkeydown="chatKeydown(event)"></textarea>
+    <button class="btn btn-primary" onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
+  </div>
+</div>
+
+<!-- FULL SCREEN LOADER -->
+<div class="full-loader" id="fullLoader">
+  <div class="spinner"></div>
+  <p>Yükleniyor...</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SETUP SCREEN -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+  <div class="center-page">
+    <div class="setup-card">
+      <div class="setup-logo">
+        <div class="big-logo">📚 Sınav Asistanı</div>
+        <div class="tagline">Sorularını yükle, yapay zeka çözsün, sen öğren.</div>
+      </div>
+
+      <!-- Step 1: API keys -->
+      <div id="setup-step-keys">
+        <div class="step-label">1. Kurulum — API Ayarları</div>
+        <div class="form-group">
+          <label class="form-label">Google Client ID</label>
+          <input type="text" class="form-input" id="setupClientId" placeholder="xxxx.apps.googleusercontent.com">
+          <div class="form-hint">Google Cloud Console → OAuth 2.0 İstemci Kimliği</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gemini API Key</label>
+          <input type="password" class="form-input" id="setupGeminiKey" placeholder="AIza...">
+          <div class="form-hint">Google AI Studio üzerinden ücretsiz alabilirsiniz</div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveSetup()">
+          <i class="ti ti-check"></i> Devam Et
+        </button>
+        <p style="font-size:11px; color: var(--text-muted); text-align:center; margin-top:12px;">Anahtarlar yalnızca tarayıcınızda saklanır, hiçbir sunucuya gönderilmez.</p>
+      </div>
+
+      <!-- Step 2: OAuth + Profile -->
+      <div id="setup-step-auth" style="display:none;">
+        <div class="step-label">2. Google Hesabı</div>
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom:16px;">Drive'a erişmek için Google hesabınızla giriş yapın.</p>
+        <button class="btn google-btn btn-full btn-lg" onclick="startOAuth()">
+          <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google ile Giriş Yap
+        </button>
+      </div>
+
+      <!-- Step 3: Create Profile -->
+      <div id="setup-step-profile" style="display:none;">
+        <div class="step-label">3. Profilini Oluştur</div>
+        <div class="form-group">
+          <label class="form-label">İsmin</label>
+          <input type="text" class="form-input" id="setupName" placeholder="Adın">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hazırlandığın Sınav</label>
+          <select class="form-select" id="setupSinavTuru">
+            <option value="TYT">TYT</option>
+            <option value="AYT" selected>AYT</option>
+            <option value="KPSS">KPSS</option>
+            <option value="YDS">YDS</option>
+            <option value="ALES">ALES</option>
+            <option value="DGS">DGS</option>
+            <option value="Diğer">Diğer</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="createProfile()">
+          <i class="ti ti-rocket"></i> Başla!
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- MAIN APP (sidebar + content) -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="screen-app" class="screen">
+  <div class="app-shell">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">📚 SA</div>
+        <div class="logo-sub">Sınav Asistanı</div>
+      </div>
+      <nav>
+        <div class="nav-item active" data-screen="dashboard" onclick="navigate('dashboard')">
+          <i class="ti ti-home"></i> Ana Sayfa
+        </div>
+        <div class="nav-item" data-screen="yukle" onclick="navigate('yukle')">
+          <i class="ti ti-upload"></i> Soru Yükle
+        </div>
+        <div class="nav-item" data-screen="arsiv" onclick="navigate('arsiv')">
+          <i class="ti ti-archive"></i> Arşiv
+        </div>
+        <div class="nav-item" data-screen="analiz" onclick="navigate('analiz')">
+          <i class="ti ti-chart-bar"></i> Analiz
+        </div>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="user-chip" onclick="navigate('profil')">
+          <div class="avatar" id="sidebarAvatar">A</div>
+          <div class="user-info">
+            <div class="name" id="sidebarName">Kullanıcı</div>
+            <div class="sinav" id="sidebarSinav">AYT</div>
+          </div>
+          <i class="ti ti-settings" style="color: var(--text-light); font-size: 16px;"></i>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page">
+        <div class="page-header">
+          <div class="page-title" id="dashGreeting">Hoş Geldin 👋</div>
+          <div class="page-sub" id="dashDate"></div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card"><div class="metric-label">Toplam Soru</div><div class="metric-value blue" id="metToplam">0</div></div>
+          <div class="metric-card"><div class="metric-label">Öğrendim</div><div class="metric-value green" id="metOgrenildi">0</div></div>
+          <div class="metric-card"><div class="metric-label">Devam Ediyor</div><div class="metric-value amber" id="metDevam">0</div></div>
+          <div class="metric-card"><div class="metric-label">Bugün Yüklenen</div><div class="metric-value" id="metBugun">0</div></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="section-title"><i class="ti ti-chart-bar" style="color: var(--primary);"></i> Ders Bazında Durum</div>
+            <div class="chart-container"><canvas id="dersChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-title"><i class="ti ti-clock" style="color: var(--amber);"></i> Tekrar Zamanı Gelenler</div>
+            <div class="remind-list" id="remindList">
+              <div class="empty-state"><i class="ti ti-mood-happy"></i><p>Harika! Bekleyen soru yok.</p></div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center; margin-top: 24px;">
+          <button class="btn btn-primary btn-lg" onclick="navigate('yukle')">
+            <i class="ti ti-plus"></i> Yeni Soru Yükle
+          </button>
+        </div>
+      </div>
+
+      <!-- YUKLE -->
+      <div id="page-yukle" class="page" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Soru Yükle</div>
+          <div class="page-sub">Soru görselini yükle, yapay zeka analiz etsin</div>
+        </div>
+        <div class="card">
+          <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <i class="ti ti-photo-up"></i>
+            <div class="upload-title">Görseli Buraya Sürükle</div>
+            <div class="upload-sub">ya da tıkla • PNG, JPG, JPEG, WEBP</div>
+          </div>
+          <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleFileSelect(event)">
+          <img id="uploadPreview" class="preview-img" style="display:none">
+          <div class="upload-progress" id="uploadProgress">
+            <div class="progress-steps">
+              <div class="progress-step" id="step1">
+                <div class="step-icon"><i class="ti ti-cloud-upload"></i></div>
+                <div class="step-text">Drive'a yükleniyor...</div>
+                <div class="step-status" id="step1Status"></div>
+              </div>
+              <div class="progress-step" id="step2">
+                <div class="step-icon"><i class="ti ti-brain"></i></div>
+                <div class="step-text">Gemini analiz ediyor...</div>
+                <div class="step-status" id="step2Status"></div>
+              </div>
+              <div class="progress-step" id="step3">
+                <div class="step-icon"><i class="ti ti-device-floppy"></i></div>
+                <div class="step-text">Sonuçlar kaydediliyor...</div>
+                <div class="step-status" id="step3Status"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARŞİV -->
+      <div id="page-arsiv" class="page" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Arşiv</div>
+        </div>
+        <div class="archive-layout">
+          <div class="folder-tree" id="folderTree">
+            <div class="tree-item active" onclick="filterArchive(null, null)" id="treeAll">
+              <i class="ti ti-folders"></i> Tümü <span class="tree-count" id="treeAllCount">0</span>
+            </div>
+            <div id="treeDersList"></div>
+          </div>
+          <div>
+            <div class="archive-stats" id="archiveStats">0 soru — 0 öğrenildi — 0 devam ediyor</div>
+            <div class="archive-search">
+              <input type="text" placeholder="Ara (ders, konu...)" id="archiveSearch" oninput="filterArchiveSearch(this.value)">
+              <i class="ti ti-search"></i>
+            </div>
+            <div class="questions-grid" id="questionsGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DETAY -->
+      <div id="page-detay" class="page" style="display:none;">
+        <div class="breadcrumb" id="detayBreadcrumb"></div>
+        <div class="detail-layout" id="detayContent"></div>
+        <div class="detail-actions" id="detayActions"></div>
+      </div>
+
+      <!-- ANALİZ -->
+      <div id="page-analiz" class="page" style="display:none;">
+        <div class="page-header">
+          <div class="page-title">Analiz</div>
+          <div class="page-sub">Çalışma istatistiklerin</div>
+        </div>
+        <div class="summary-cards" id="analysisSummary" style="margin-bottom:20px;"></div>
+        <div class="analytics-grid">
+          <div class="card">
+            <div class="section-title"><i class="ti ti-chart-pie"></i> Ders Dağılımı</div>
+            <div class="chart-container"><canvas id="pieChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-title"><i class="ti ti-timeline"></i> Haftalık Aktivite</div>
+            <div class="chart-container"><canvas id="weekChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+          <div class="section-title"><i class="ti ti-table"></i> Konu Bazında Detay</div>
+          <div style="overflow-x:auto;">
+            <table class="analytics-table" id="analyticsTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('ders')">Ders ↕</th>
+                  <th onclick="sortTable('konu')">Konu ↕</th>
+                  <th onclick="sortTable('toplam')">Toplam ↕</th>
+                  <th onclick="sortTable('ogrenildi')">Öğrenildi ↕</th>
+                  <th onclick="sortTable('devam')">Devam ↕</th>
+                  <th>İlerleme</th>
+                  <th onclick="sortTable('sonAktivite')">Son Aktivite ↕</th>
+                </tr>
+              </thead>
+              <tbody id="analyticsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFİL -->
+      <div id="page-profil" class="page" style="display:none;">
+        <div class="page-header"><div class="page-title">Profil & Ayarlar</div></div>
+        <div class="card profile-card">
+          <div class="form-group">
+            <label class="form-label">İsim</label>
+            <input type="text" class="form-input" id="profileName">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sınav Türü</label>
+            <select class="form-select" id="profileSinavTuru">
+              <option>TYT</option><option>AYT</option><option>KPSS</option>
+              <option>YDS</option><option>ALES</option><option>DGS</option><option>Diğer</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:8px;">
+            <button class="btn btn-primary" onclick="saveProfile()"><i class="ti ti-check"></i> Kaydet</button>
+            <button class="btn btn-secondary" onclick="logout()" style="margin-left:auto; color: var(--red);"><i class="ti ti-logout"></i> Çıkış Yap</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mobile-nav-item active" data-screen="dashboard" onclick="navigate('dashboard')"><i class="ti ti-home"></i>Ana Sayfa</button>
+      <button class="mobile-nav-item" data-screen="yukle" onclick="navigate('yukle')"><i class="ti ti-upload"></i>Yükle</button>
+      <button class="mobile-nav-item" data-screen="arsiv" onclick="navigate('arsiv')"><i class="ti ti-archive"></i>Arşiv</button>
+      <button class="mobile-nav-item" data-screen="analiz" onclick="navigate('analiz')"><i class="ti ti-chart-bar"></i>Analiz</button>
+    </div>
+  </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════
+// ── CONFIG
+// ════════════════════════════════════════════════════
+const OAUTH_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const REDIRECT_URI = location.origin + location.pathname;
+
+// ════════════════════════════════════════════════════
+// ── STATE
+// ════════════════════════════════════════════════════
+let STATE = {
+  clientId: '',
+  geminiKey: '',
+  accessToken: '',
+  refreshToken: '',
+  tokenExpiry: 0,
+  profile: null,
+  analitik: null,
+  rootFolderId: null,
+  sorularFolderId: null,
+  profileFileId: null,
+  analitikFileId: null,
+  questions: [], // [{id, ders, konu, zorluk, tarih, durum, cozum, resimDriveId, fileId, goruntulemeSayisi, tekrarSayisi, sonGoruntuleme}]
+  currentQuestion: null,
+  chatHistory: [],
+  currentFilter: { ders: null, konu: null },
+  currentPage: 'dashboard',
+  dersChartInstance: null,
+  pieChartInstance: null,
+  weekChartInstance: null,
+  sessionStart: Date.now(),
+  tableSortKey: null,
+  tableSortAsc: true,
+};
+
+// ════════════════════════════════════════════════════
+// ── UTILS
+// ════════════════════════════════════════════════════
+function genId() { return Math.random().toString(36).slice(2, 9); }
+function now() { return new Date().toISOString(); }
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (diff === 0) return 'Bugün';
+  if (diff === 1) return 'Dün';
+  return `${diff} gün önce`;
+}
+
+function showToast(msg, type='') {
+  const tc = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i class="ti ti-${type === 'success' ? 'check' : type === 'error' ? 'x' : 'info-circle'}"></i> ${msg}`;
+  tc.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function showLoader(show) {
+  document.getElementById('fullLoader').style.display = show ? 'flex' : 'none';
+}
+
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// Online/offline
+window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
+window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
+
+// ════════════════════════════════════════════════════
+// ── OAUTH / AUTH
+// ════════════════════════════════════════════════════
+function base64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function generatePKCE() {
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  const challenge = base64url(hash);
+  return { verifier, challenge };
+}
+
+async function startOAuth() {
+  const { verifier, challenge } = await generatePKCE();
+  sessionStorage.setItem('pkce_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: STATE.clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: OAUTH_SCOPES,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+  location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+async function handleOAuthCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (!code) return false;
+  history.replaceState({}, '', location.pathname);
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  if (!verifier) { showToast('PKCE doğrulaması başarısız.', 'error'); return false; }
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: STATE.clientId,
+        code_verifier: verifier,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: REDIRECT_URI,
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error_description || data.error);
+    STATE.accessToken = data.access_token;
+    STATE.tokenExpiry = Date.now() + data.expires_in * 1000;
+    if (data.refresh_token) STATE.refreshToken = data.refresh_token;
+    saveTokens();
+    sessionStorage.removeItem('pkce_verifier');
+    return true;
+  } catch (e) {
+    showToast('Giriş başarısız: ' + e.message, 'error');
+    return false;
+  }
+}
+
+function saveTokens() {
+  localStorage.setItem('sa_access_token', STATE.accessToken);
+  localStorage.setItem('sa_refresh_token', STATE.refreshToken);
+  localStorage.setItem('sa_token_expiry', STATE.tokenExpiry);
+}
+
+function loadTokens() {
+  STATE.accessToken = localStorage.getItem('sa_access_token') || '';
+  STATE.refreshToken = localStorage.getItem('sa_refresh_token') || '';
+  STATE.tokenExpiry = parseInt(localStorage.getItem('sa_token_expiry') || '0');
+}
+
+async function ensureToken() {
+  if (STATE.accessToken && Date.now() < STATE.tokenExpiry - 60000) return true;
+  if (!STATE.refreshToken) return false;
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: STATE.clientId,
+        refresh_token: STATE.refreshToken,
+        grant_type: 'refresh_token',
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    STATE.accessToken = data.access_token;
+    STATE.tokenExpiry = Date.now() + data.expires_in * 1000;
+    saveTokens();
+    return true;
+  } catch {
+    logout();
+    return false;
+  }
+}
+
+function logout() {
+  localStorage.removeItem('sa_access_token');
+  localStorage.removeItem('sa_refresh_token');
+  localStorage.removeItem('sa_token_expiry');
+  STATE.accessToken = '';
+  STATE.refreshToken = '';
+  location.reload();
+}
+
+// ════════════════════════════════════════════════════
+// ── DRIVE API
+// ════════════════════════════════════════════════════
+async function driveReq(path, opts={}) {
+  await ensureToken();
+  const res = await fetch(`${DRIVE_API}${path}`, {
+    ...opts,
+    headers: { Authorization: `Bearer ${STATE.accessToken}`, ...(opts.headers || {}) }
+  });
+  if (res.status === 429) throw new Error('QUOTA_EXCEEDED');
+  if (!res.ok) throw new Error(`Drive API ${res.status}`);
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function driveListFiles(parentId, mimeType) {
+  let q = `'${parentId}' in parents and trashed=false`;
+  if (mimeType) q += ` and mimeType='${mimeType}'`;
+  const data = await driveReq(`/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime)&pageSize=1000`);
+  return data.files || [];
+}
+
+async function driveCreateFolder(name, parentId) {
+  const meta = { name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : [] };
+  const data = await driveReq('/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(meta)
+  });
+  return data.id;
+}
+
+async function driveGetOrCreateFolder(name, parentId) {
+  const list = await driveListFiles(parentId, 'application/vnd.google-apps.folder');
+  const found = list.find(f => f.name === name);
+  if (found) return found.id;
+  return driveCreateFolder(name, parentId);
+}
+
+async function driveUploadJSON(filename, data, parentId, existingId) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  if (existingId) {
+    await driveReq(`/upload/files/${existingId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: blob
+    });
+    return existingId;
+  }
+  const meta = { name: filename, parents: parentId ? [parentId] : [] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob);
+  await ensureToken();
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${STATE.accessToken}` },
+    body: form
+  });
+  const result = await res.json();
+  return result.id;
+}
+
+async function driveUploadImage(blob, filename, parentId) {
+  const meta = { name: filename, parents: [parentId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob);
+  await ensureToken();
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${STATE.accessToken}` },
+    body: form
+  });
+  const data = await res.json();
+  return data.id;
+}
+
+async function driveReadFile(fileId) {
+  await ensureToken();
+  const res = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${STATE.accessToken}` }
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function driveImageUrl(fileId) {
+  return `https://drive.google.com/uc?export=view&id=${fileId}`;
+}
+
+// ════════════════════════════════════════════════════
+// ── GEMINI API
+// ════════════════════════════════════════════════════
+async function geminiAnalyze(imageBase64, mimeType) {
+  const { isim, sinavTuru } = STATE.profile;
+  const prompt = `Sen ${sinavTuru} sınavına hazırlanan ${isim} adlı bir öğrencinin soru çözme asistanısın.
+Verilen soru görselini analiz et ve YALNIZCA aşağıdaki JSON formatında yanıt ver.
+Türkçe yaz. JSON dışında hiçbir şey yazma, markdown backtick kullanma.
+
+{"ders":"","konu":"","zorluk":"Kolay|Orta|Zor","cozum":{"gorselGerekli":false,"svg":null,"ozet":"","anaKavram":"","adimlar":[""],"sonuc":"","sikYapilanHata":"","sinavTuyu":"","baglantiKonular":[""]}}
+
+gorselGerekli: geometri/grafik/devre için true, svg üret; değilse false, svg null.
+anaKavram: formül veya teorem.
+adimlar: her adım ayrı string, LaTeX kullanma, düz metin.`;
+
+  const body = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: imageBase64 } },
+        { text: prompt }
+      ]
+    }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+  };
+
+  const res = await fetch(`${GEMINI_API}?key=${STATE.geminiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+async function geminiChat(userMsg, cozum, imageBase64, mimeType) {
+  const { isim, sinavTuru } = STATE.profile;
+  const history = STATE.chatHistory.map(m => `${m.role === 'user' ? isim : 'Asistan'}: ${m.content}`).join('\n');
+  const sysPrompt = `Sen ${sinavTuru} sınavına hazırlanan ${isim} adlı öğrencinin soru asistanısın.
+Daha önce çözülmüş bir soru hakkında öğrenci soru soruyor.
+Daha önce üretilen çözüm: ${JSON.stringify(cozum)}
+Sohbet geçmişi:\n${history}
+Öğrencinin yeni sorusu: ${userMsg}
+Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, baştan tekrar etme.`;
+
+  const parts = [];
+  if (imageBase64) parts.push({ inline_data: { mime_type: mimeType, data: imageBase64 } });
+  parts.push({ text: sysPrompt });
+
+  const body = {
+    contents: [{ parts }],
+    generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+  };
+  const res = await fetch(`${GEMINI_API}?key=${STATE.geminiKey}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
+}
+
+// ════════════════════════════════════════════════════
+// ── SETUP
+// ════════════════════════════════════════════════════
+function saveSetup() {
+  const cid = document.getElementById('setupClientId').value.trim();
+  const gkey = document.getElementById('setupGeminiKey').value.trim();
+  if (!cid || !gkey) { showToast('Lütfen tüm alanları doldurun.', 'error'); return; }
+  localStorage.setItem('sa_client_id', cid);
+  localStorage.setItem('sa_gemini_key', gkey);
+  STATE.clientId = cid;
+  STATE.geminiKey = gkey;
+  document.getElementById('setup-step-keys').style.display = 'none';
+  document.getElementById('setup-step-auth').style.display = 'block';
+}
+
+async function createProfile() {
+  const isim = document.getElementById('setupName').value.trim();
+  const sinavTuru = document.getElementById('setupSinavTuru').value;
+  if (!isim) { showToast('İsim gerekli.', 'error'); return; }
+  showLoader(true);
+  try {
+    const profile = { isim, sinavTuru, olusturmaTarihi: now(), guncellenmeTarihi: now() };
+    STATE.profile = profile;
+    await initDriveStructure();
+    STATE.profileFileId = await driveUploadJSON('profil.json', profile, STATE.rootFolderId);
+    STATE.analitik = { toplamSoru: 0, dersler: {}, oturumGecmisi: [] };
+    STATE.analitikFileId = await driveUploadJSON('analitik.json', STATE.analitik, STATE.rootFolderId);
+    localStorage.setItem('sa_profile_file_id', STATE.profileFileId);
+    localStorage.setItem('sa_analitik_file_id', STATE.analitikFileId);
+    showLoader(false);
+    showApp();
+  } catch (e) {
+    showLoader(false);
+    showToast('Profil oluşturulamadı: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── DRIVE STRUCTURE INIT
+// ════════════════════════════════════════════════════
+async function initDriveStructure() {
+  STATE.rootFolderId = await driveGetOrCreateFolder('SinavAsistani', null);
+  localStorage.setItem('sa_root_folder', STATE.rootFolderId);
+  STATE.sorularFolderId = await driveGetOrCreateFolder('sorular', STATE.rootFolderId);
+  localStorage.setItem('sa_sorular_folder', STATE.sorularFolderId);
+}
+
+async function loadAllQuestions() {
+  STATE.questions = [];
+  try {
+    const dersKlasors = await driveListFiles(STATE.sorularFolderId, 'application/vnd.google-apps.folder');
+    for (const dersFolder of dersKlasors) {
+      const konuKlasors = await driveListFiles(dersFolder.id, 'application/vnd.google-apps.folder');
+      for (const konuFolder of konuKlasors) {
+        const files = await driveListFiles(konuFolder.id, 'application/json');
+        for (const f of files) {
+          try {
+            const q = await driveReadFile(f.id);
+            if (q && q.id) {
+              q.fileId = f.id;
+              q.dersFolderId = dersFolder.id;
+              q.konuFolderId = konuFolder.id;
+              STATE.questions.push(q);
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Sorular yüklenemedi:', e);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── ANALYTICS UPDATE
+// ════════════════════════════════════════════════════
+function rebuildAnalitik() {
+  const a = { toplamSoru: STATE.questions.length, dersler: {}, oturumGecmisi: STATE.analitik?.oturumGecmisi || [] };
+  for (const q of STATE.questions) {
+    if (!a.dersler[q.ders]) a.dersler[q.ders] = { toplam: 0, ogrenildi: 0, devam: 0, konular: {} };
+    const d = a.dersler[q.ders];
+    d.toplam++;
+    if (q.durum === 'ogrenildi') d.ogrenildi++; else d.devam++;
+    if (!d.konular[q.konu]) d.konular[q.konu] = { toplam: 0, ogrenildi: 0, devam: 0, sonAktivite: null };
+    const k = d.konular[q.konu];
+    k.toplam++;
+    if (q.durum === 'ogrenildi') k.ogrenildi++; else k.devam++;
+    if (!k.sonAktivite || q.tarih > k.sonAktivite) k.sonAktivite = q.tarih;
+  }
+  STATE.analitik = a;
+}
+
+async function saveAnalitik() {
+  rebuildAnalitik();
+  try {
+    STATE.analitikFileId = await driveUploadJSON('analitik.json', STATE.analitik, STATE.rootFolderId, STATE.analitikFileId);
+    localStorage.setItem('sa_analitik_file_id', STATE.analitikFileId);
+  } catch (e) { console.error('Analitik kaydedilemedi:', e); }
+}
+
+// ════════════════════════════════════════════════════
+// ── UI / ROUTER
+// ════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function navigate(page) {
+  STATE.currentPage = page;
+  // Show/hide pages within the app screen
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  const pg = document.getElementById(`page-${page}`);
+  if (pg) pg.style.display = 'block';
+
+  // Update nav active states
+  document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.screen === page);
+  });
+
+  // Load page data
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'arsiv') renderArchive();
+  if (page === 'analiz') renderAnaliz();
+  if (page === 'profil') renderProfil();
+  if (page === 'yukle') resetUpload();
+}
+
+function showApp() {
+  showScreen('screen-app');
+  updateSidebar();
+  navigate('dashboard');
+}
+
+function updateSidebar() {
+  if (!STATE.profile) return;
+  const { isim, sinavTuru } = STATE.profile;
+  document.getElementById('sidebarName').textContent = isim;
+  document.getElementById('sidebarSinav').textContent = sinavTuru;
+  document.getElementById('sidebarAvatar').textContent = isim[0].toUpperCase();
+}
+
+// ════════════════════════════════════════════════════
+// ── DASHBOARD
+// ════════════════════════════════════════════════════
+function renderDashboard() {
+  const today = new Date().toDateString();
+  const total = STATE.questions.length;
+  const learned = STATE.questions.filter(q => q.durum === 'ogrenildi').length;
+  const devam = total - learned;
+  const bugun = STATE.questions.filter(q => new Date(q.tarih).toDateString() === today).length;
+  document.getElementById('metToplam').textContent = total;
+  document.getElementById('metOgrenildi').textContent = learned;
+  document.getElementById('metDevam').textContent = devam;
+  document.getElementById('metBugun').textContent = bugun;
+  const name = STATE.profile?.isim || '';
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar';
+  document.getElementById('dashGreeting').textContent = `${greeting}, ${name} 👋`;
+  document.getElementById('dashDate').textContent = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  renderDersChart();
+  renderRemindList();
+}
+
+function renderDersChart() {
+  const ctx = document.getElementById('dersChart').getContext('2d');
+  if (STATE.dersChartInstance) STATE.dersChartInstance.destroy();
+  const dersler = {};
+  for (const q of STATE.questions) {
+    if (!dersler[q.ders]) dersler[q.ders] = { ogrenildi: 0, devam: 0 };
+    if (q.durum === 'ogrenildi') dersler[q.ders].ogrenildi++;
+    else dersler[q.ders].devam++;
+  }
+  const labels = Object.keys(dersler);
+  if (!labels.length) return;
+  STATE.dersChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Öğrenildi', data: labels.map(l => dersler[l].ogrenildi), backgroundColor: '#16A34A', borderRadius: 4 },
+        { label: 'Devam', data: labels.map(l => dersler[l].devam), backgroundColor: '#D97706', borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+}
+
+function renderRemindList() {
+  const sevenDaysAgo = Date.now() - 7 * 86400000;
+  const remind = STATE.questions
+    .filter(q => q.durum !== 'ogrenildi' && (!q.sonGoruntuleme || new Date(q.sonGoruntuleme).getTime() < sevenDaysAgo))
+    .slice(0, 5);
+  const container = document.getElementById('remindList');
+  if (!remind.length) {
+    container.innerHTML = '<div class="empty-state"><i class="ti ti-mood-happy"></i><p>Harika! Bekleyen soru yok.</p></div>';
+    return;
+  }
+  container.innerHTML = remind.map(q => `
+    <div class="remind-card" onclick="openQuestion('${q.id}')">
+      <div class="remind-thumb">
+        ${q.resimDriveId ? `<img src="${driveImageUrl(q.resimDriveId)}" alt="" onerror="this.parentElement.innerHTML='<i class=\\'ti ti-photo\\' style=\\'color:var(--text-light);font-size:24px;margin:12px auto;display:block;\\'></i>'">` : '<i class="ti ti-photo" style="color:var(--text-light);font-size:24px;margin:12px auto;display:block;"></i>'}
+      </div>
+      <div class="remind-info">
+        <div class="remind-topic">${q.konu}</div>
+        <div class="remind-meta">${q.ders} · ${formatDate(q.sonGoruntuleme || q.tarih)}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="color: var(--text-light);"></i>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════
+// ── UPLOAD
+// ════════════════════════════════════════════════════
+let uploadFile = null;
+
+function resetUpload() {
+  uploadFile = null;
+  document.getElementById('uploadArea').style.display = 'flex';
+  document.getElementById('uploadArea').className = 'upload-area';
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadPreview').style.display = 'none';
+  ['step1','step2','step3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'progress-step';
+    el.querySelector('.step-icon').innerHTML = `<i class="ti ti-${id === 'step1' ? 'cloud-upload' : id === 'step2' ? 'brain' : 'device-floppy'}"></i>`;
+    el.querySelector('.step-status').textContent = '';
+  });
+}
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadArea').classList.add('drag-over'); }
+function handleDragLeave() { document.getElementById('uploadArea').classList.remove('drag-over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  handleDragLeave();
+  const file = e.dataTransfer.files[0];
+  if (file) processUploadFile(file);
+}
+function handleFileSelect(e) { if (e.target.files[0]) processUploadFile(e.target.files[0]); }
+
+function processUploadFile(file) {
+  if (!['image/png','image/jpeg','image/webp'].includes(file.type)) {
+    showToast('Desteklenmeyen dosya türü. PNG, JPG veya WEBP yükleyin.', 'error'); return;
+  }
+  uploadFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('uploadPreview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  startUpload(file);
+}
+
+function setStep(id, state, statusText='') {
+  const el = document.getElementById(id);
+  el.className = `progress-step ${state}`;
+  const icon = el.querySelector('.step-icon');
+  const status = el.querySelector('.step-status');
+  if (state === 'active') icon.innerHTML = '<div class="spinner"></div>';
+  else if (state === 'done') icon.innerHTML = '<i class="ti ti-check"></i>';
+  else if (state === 'error') icon.innerHTML = '<i class="ti ti-x"></i>';
+  status.textContent = statusText;
+}
+
+async function startUpload(file) {
+  document.getElementById('uploadArea').style.display = 'none';
+  document.getElementById('uploadProgress').style.display = 'block';
+
+  try {
+    // Step 1: Upload to Drive
+    setStep('step1', 'active');
+    const dersFolder = await driveGetOrCreateFolder('Genel', STATE.sorularFolderId);
+    const id = genId();
+    const filename = `soru_${id}.${file.type.split('/')[1]}`;
+    const imageId = await driveUploadImage(file, filename, dersFolder);
+    setStep('step1', 'done', '✓');
+
+    // Step 2: Gemini Analysis
+    setStep('step2', 'active');
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    let analysis;
+    try {
+      analysis = await geminiAnalyze(base64, file.type);
+    } catch (e) {
+      setStep('step2', 'error', 'Hata');
+      showToast('Gemini analizi başarısız: ' + e.message, 'error');
+      document.getElementById('uploadProgress').insertAdjacentHTML('beforeend',
+        `<div style="text-align:center;margin-top:16px;"><button class="btn btn-secondary" onclick="startUpload(uploadFile)"><i class="ti ti-refresh"></i> Tekrar Dene</button></div>`);
+      return;
+    }
+    setStep('step2', 'done', '✓');
+
+    // Move image to correct ders/konu folder
+    const dersFolderId = await driveGetOrCreateFolder(analysis.ders, STATE.sorularFolderId);
+    const konuFolderId = await driveGetOrCreateFolder(analysis.konu, dersFolderId);
+    // Move file
+    try {
+      await ensureToken();
+      await fetch(`${DRIVE_API}/files/${imageId}?addParents=${konuFolderId}&removeParents=${dersFolder}&fields=id`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${STATE.accessToken}` }
+      });
+    } catch {}
+
+    // Step 3: Save JSON
+    setStep('step3', 'active');
+    const questionData = {
+      id, tarih: now(), resimDriveId: imageId,
+      ders: analysis.ders, konu: analysis.konu, zorluk: analysis.zorluk,
+      cozum: analysis.cozum, durum: 'devam',
+      goruntulemeSayisi: 0, tekrarSayisi: 0, sonGoruntuleme: null
+    };
+    const jsonName = `soru_${id}.json`;
+    const fileId = await driveUploadJSON(jsonName, questionData, konuFolderId);
+    questionData.fileId = fileId;
+    questionData.dersFolderId = dersFolderId;
+    questionData.konuFolderId = konuFolderId;
+    STATE.questions.push(questionData);
+    await saveAnalitik();
+    setStep('step3', 'done', '✓');
+
+    showToast('Soru başarıyla yüklendi!', 'success');
+    setTimeout(() => openQuestion(id), 1000);
+  } catch (e) {
+    showToast('Yükleme başarısız: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── ARŞİV
+// ════════════════════════════════════════════════════
+let archiveFilteredQuestions = [];
+let selectedDers = null;
+let selectedKonu = null;
+
+function renderArchive() {
+  renderFolderTree();
+  filterArchive(null, null);
+}
+
+function renderFolderTree() {
+  const dersList = document.getElementById('treeDersList');
+  const dersMap = {};
+  for (const q of STATE.questions) {
+    if (!dersMap[q.ders]) dersMap[q.ders] = {};
+    if (!dersMap[q.ders][q.konu]) dersMap[q.ders][q.konu] = 0;
+    dersMap[q.ders][q.konu]++;
+  }
+  document.getElementById('treeAllCount').textContent = STATE.questions.length;
+  dersList.innerHTML = Object.entries(dersMap).map(([ders, konular]) => {
+    const dersTotal = Object.values(konular).reduce((a,b) => a+b, 0);
+    return `
+      <div class="tree-item" id="tree-${ders}" onclick="filterArchive('${ders}', null)">
+        <i class="ti ti-book"></i> ${ders} <span class="tree-count">${dersTotal}</span>
+      </div>
+      <div class="tree-children">
+        ${Object.entries(konular).map(([konu, count]) => `
+          <div class="tree-item" id="tree-${ders}-${konu}" onclick="filterArchive('${ders}','${konu}')">
+            <i class="ti ti-bookmark"></i> ${konu} <span class="tree-count">${count}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function filterArchive(ders, konu) {
+  selectedDers = ders;
+  selectedKonu = konu;
+  document.querySelectorAll('.tree-item').forEach(t => t.classList.remove('active'));
+  if (!ders) document.getElementById('treeAll').classList.add('active');
+  else {
+    const key = konu ? `tree-${ders}-${konu}` : `tree-${ders}`;
+    const el = document.getElementById(key);
+    if (el) el.classList.add('active');
+  }
+  archiveFilteredQuestions = STATE.questions.filter(q => {
+    if (ders && q.ders !== ders) return false;
+    if (konu && q.konu !== konu) return false;
+    return true;
+  });
+  renderQuestionGrid(archiveFilteredQuestions);
+  updateArchiveStats(archiveFilteredQuestions);
+}
+
+function filterArchiveSearch(val) {
+  const v = val.toLowerCase();
+  const filtered = STATE.questions.filter(q => {
+    if (selectedDers && q.ders !== selectedDers) return false;
+    if (selectedKonu && q.konu !== selectedKonu) return false;
+    return q.ders.toLowerCase().includes(v) || q.konu.toLowerCase().includes(v);
+  });
+  renderQuestionGrid(filtered);
+  updateArchiveStats(filtered);
+}
+
+function updateArchiveStats(qs) {
+  const learned = qs.filter(q => q.durum === 'ogrenildi').length;
+  document.getElementById('archiveStats').innerHTML = `<strong>${qs.length}</strong> soru — <strong style="color:var(--green)">${learned}</strong> öğrenildi — <strong style="color:var(--amber)">${qs.length-learned}</strong> devam ediyor`;
+}
+
+function renderQuestionGrid(questions) {
+  const grid = document.getElementById('questionsGrid');
+  if (!questions.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-inbox"></i><p>Henüz soru yok. Soru yükleyerek başla!</p></div>';
+    return;
+  }
+  grid.innerHTML = questions.map(q => `
+    <div class="question-card" onclick="openQuestion('${q.id}')">
+      <div class="question-thumb">
+        ${q.resimDriveId
+          ? `<img src="${driveImageUrl(q.resimDriveId)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-img\\'><i class=\\'ti ti-photo\\'></i></div>'">`
+          : '<div class="no-img"><i class="ti ti-photo"></i></div>'}
+      </div>
+      <div class="question-body">
+        <div class="question-meta">
+          <span class="badge badge-blue">${q.ders}</span>
+          <span class="badge badge-gray">${q.konu}</span>
+          ${q.durum === 'ogrenildi' ? '<span class="badge badge-green"><i class="ti ti-check"></i> Öğrendim</span>' : '<span class="badge badge-amber">Devam</span>'}
+        </div>
+        <div class="question-footer">
+          <span>${formatDate(q.tarih)}</span>
+          <span class="counter"><i class="ti ti-eye" style="font-size:13px;"></i> ${q.goruntulemeSayisi||0}</span>
+          <span class="counter"><i class="ti ti-refresh" style="font-size:13px;"></i> ${q.tekrarSayisi||0}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════
+// ── DETAY
+// ════════════════════════════════════════════════════
+async function openQuestion(id) {
+  const q = STATE.questions.find(q => q.id === id);
+  if (!q) return;
+  STATE.currentQuestion = q;
+  STATE.chatHistory = [];
+
+  // Increment view count
+  q.goruntulemeSayisi = (q.goruntulemeSayisi || 0) + 1;
+  q.sonGoruntuleme = now();
+  saveQuestionToFile(q);
+
+  navigate('detay');
+  renderDetail(q);
+}
+
+async function saveQuestionToFile(q) {
+  try {
+    const { fileId, dersFolderId, konuFolderId, ...data } = q;
+    await driveUploadJSON(`soru_${q.id}.json`, data, konuFolderId, fileId);
+  } catch (e) { console.error('Soru kaydedilemedi:', e); }
+}
+
+function renderDetail(q) {
+  const { cozum } = q;
+  // Breadcrumb
+  document.getElementById('detayBreadcrumb').innerHTML = `
+    <a onclick="navigate('arsiv')">Arşiv</a>
+    <i class="ti ti-chevron-right"></i>
+    <a onclick="filterArchive('${q.ders}', null); navigate('arsiv')">${q.ders}</a>
+    <i class="ti ti-chevron-right"></i>
+    <a onclick="filterArchive('${q.ders}', '${q.konu}'); navigate('arsiv')">${q.konu}</a>
+  `;
+
+  // Main content
+  const imgSrc = q.resimDriveId ? driveImageUrl(q.resimDriveId) : '';
+  document.getElementById('detayContent').innerHTML = `
+    <div>
+      ${imgSrc ? `<img src="${imgSrc}" alt="Soru" onclick="openLightbox('${imgSrc}')" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);cursor:zoom-in;">` : '<div style="padding:40px;text-align:center;color:var(--text-light);border:1px dashed var(--border);border-radius:var(--radius);"><i class="ti ti-photo" style="font-size:40px;"></i><br>Görsel bulunamadı</div>'}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+        <span class="badge badge-blue"><i class="ti ti-book"></i> ${q.ders}</span>
+        <span class="badge badge-gray">${q.konu}</span>
+        <span class="badge ${q.zorluk === 'Kolay' ? 'badge-green' : q.zorluk === 'Zor' ? 'badge-purple' : 'badge-amber'}">${q.zorluk}</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">${formatDate(q.tarih)}</span>
+      </div>
+    </div>
+    <div class="solution-card">
+      <div class="solution-header">
+        <i class="ti ti-sparkles" style="color:var(--primary);font-size:18px;"></i>
+        <span style="font-weight:600;">Çözüm</span>
+      </div>
+      <div class="solution-body">
+        <div class="info-box blue">
+          <i class="ti ti-bulb"></i>
+          <div class="box-content">
+            <div class="box-label">Özet</div>
+            <div class="box-text">${cozum.ozet}</div>
+          </div>
+        </div>
+        <div class="info-box purple">
+          <i class="ti ti-math"></i>
+          <div class="box-content">
+            <div class="box-label">Anahtar Kavram / Formül</div>
+            <div class="box-text">${cozum.anaKavram}</div>
+          </div>
+        </div>
+        ${cozum.gorselGerekli && cozum.svg ? `<div class="svg-container">${cozum.svg}</div>` : ''}
+        <div class="steps-section">
+          <div class="steps-title">Adım Adım Çözüm</div>
+          ${(cozum.adimlar || []).map((adim, i) => `
+            <div class="step-item">
+              <div class="step-num">${i+1}</div>
+              <div class="step-content">${adim}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="info-box green">
+          <i class="ti ti-check-circle"></i>
+          <div class="box-content">
+            <div class="box-label">Sonuç</div>
+            <div class="box-text">${cozum.sonuc}</div>
+          </div>
+        </div>
+        <div class="info-box amber">
+          <i class="ti ti-alert-triangle"></i>
+          <div class="box-content">
+            <div class="box-label">Sık Yapılan Hata</div>
+            <div class="box-text">${cozum.sikYapilanHata}</div>
+          </div>
+        </div>
+        <div class="info-box gray">
+          <i class="ti ti-rocket"></i>
+          <div class="box-content">
+            <div class="box-label">Sınav Tüyosu</div>
+            <div class="box-text">${cozum.sinavTuyu}</div>
+          </div>
+        </div>
+        ${(cozum.baglantiKonular || []).length ? `
+          <div>
+            <div class="steps-title">İlgili Konular</div>
+            <div class="tag-list">
+              ${cozum.baglantiKonular.map(k => `<span class="tag" onclick="filterArchive(null, '${k}'); navigate('arsiv')">${k}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // Actions
+  const isLearned = q.durum === 'ogrenildi';
+  document.getElementById('detayActions').innerHTML = `
+    <button class="btn btn-green btn-learned ${isLearned ? 'active' : ''}" id="btnLearned" onclick="toggleLearned()">
+      <i class="ti ti-check"></i> ${isLearned ? 'Öğrenildi ✓' : 'Öğrendim'}
+    </button>
+    <button class="btn btn-amber" onclick="setDevam()" ${!isLearned ? 'disabled' : ''} id="btnDevam">
+      <i class="ti ti-refresh"></i> Devam Ediyorum
+    </button>
+    <button class="btn btn-secondary" onclick="openChat()">
+      <i class="ti ti-message-circle"></i> Soru Sor
+    </button>
+    <div class="action-spacer"></div>
+    <div class="counters">
+      <span class="counter-item"><i class="ti ti-eye"></i> <span id="viewCount">${q.goruntulemeSayisi}</span></span>
+      <span class="counter-item"><i class="ti ti-refresh"></i> <span id="repeatCount">${q.tekrarSayisi}</span></span>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="incrementTekrar()"><i class="ti ti-refresh"></i> Tekrar Ettim</button>
+  `;
+}
+
+async function toggleLearned() {
+  const q = STATE.currentQuestion;
+  q.durum = 'ogrenildi';
+  await saveQuestionToFile(q);
+  await saveAnalitik();
+  document.getElementById('btnLearned').className = 'btn btn-green btn-learned active';
+  document.getElementById('btnLearned').innerHTML = '<i class="ti ti-check"></i> Öğrenildi ✓';
+  document.getElementById('btnDevam').removeAttribute('disabled');
+  showToast('Harika! Bu soruyu öğrendin 🎉', 'success');
+}
+
+async function setDevam() {
+  const q = STATE.currentQuestion;
+  q.durum = 'devam';
+  await saveQuestionToFile(q);
+  await saveAnalitik();
+  document.getElementById('btnLearned').className = 'btn btn-green btn-learned';
+  document.getElementById('btnLearned').innerHTML = '<i class="ti ti-check"></i> Öğrendim';
+  document.getElementById('btnDevam').setAttribute('disabled', '');
+  showToast('Durum güncellendi.', '');
+}
+
+async function incrementTekrar() {
+  const q = STATE.currentQuestion;
+  q.tekrarSayisi = (q.tekrarSayisi || 0) + 1;
+  document.getElementById('repeatCount').textContent = q.tekrarSayisi;
+  await saveQuestionToFile(q);
+}
+
+// ════════════════════════════════════════════════════
+// ── CHAT
+// ════════════════════════════════════════════════════
+let chatImageBase64 = null;
+let chatImageMime = null;
+
+function openChat() {
+  const q = STATE.currentQuestion;
+  document.getElementById('chatSummary').textContent = `📌 ${q.ders} — ${q.konu}: ${q.cozum.ozet}`;
+  document.getElementById('chatMessages').innerHTML = '<div class="chat-bubble ai">Merhaba! Bu soru hakkında aklına takılan bir şey mi var? Sormaktan çekinme. 😊</div>';
+  document.getElementById('chatOverlay').style.display = 'block';
+  document.getElementById('chatPanel').classList.add('open');
+
+  // Preload image for chat
+  if (q.resimDriveId) {
+    fetch(driveImageUrl(q.resimDriveId))
+      .then(r => r.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          chatImageBase64 = e.target.result.split(',')[1];
+          chatImageMime = blob.type;
+        };
+        reader.readAsDataURL(blob);
+      }).catch(() => {});
+  }
+}
+
+function closeChat() {
+  document.getElementById('chatPanel').classList.remove('open');
+  document.getElementById('chatOverlay').style.display = 'none';
+}
+
+function chatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const q = STATE.currentQuestion;
+
+  const container = document.getElementById('chatMessages');
+  container.innerHTML += `<div class="chat-bubble user">${msg}</div>`;
+  const thinking = document.createElement('div');
+  thinking.className = 'chat-bubble ai thinking';
+  thinking.textContent = 'Düşünüyor...';
+  container.appendChild(thinking);
+  container.scrollTop = container.scrollHeight;
+
+  STATE.chatHistory.push({ role: 'user', content: msg });
+
+  try {
+    const reply = await geminiChat(msg, q.cozum, chatImageBase64, chatImageMime);
+    thinking.remove();
+    container.innerHTML += `<div class="chat-bubble ai">${reply}</div>`;
+    STATE.chatHistory.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    thinking.remove();
+    container.innerHTML += `<div class="chat-bubble ai thinking">Hata: ${e.message}</div>`;
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════
+// ── ANALİZ
+// ════════════════════════════════════════════════════
+let tableSortKey = 'ders';
+let tableSortAsc = true;
+
+function renderAnaliz() {
+  rebuildAnalitik();
+  renderSummaryCards();
+  renderPieChart();
+  renderWeekChart();
+  renderAnalyticsTable();
+}
+
+function renderSummaryCards() {
+  const a = STATE.analitik;
+  const dersler = Object.keys(a.dersler);
+  const enCok = dersler.sort((a1, a2) => (a.dersler[b2]?.toplam||0) - (a.dersler[a1]?.toplam||0))[0] || '—';
+  const enAz = dersler.sort((a1, a2) => (a.dersler[a2]?.devam||0) - (a.dersler[a1]?.devam||0))[0] || '—';
+  const thisWeek = STATE.questions.filter(q => Date.now() - new Date(q.tarih).getTime() < 7*86400000).length;
+  document.getElementById('analysisSummary').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Toplam Soru</div><div class="metric-value blue">${a.toplamSoru}</div></div>
+    <div class="metric-card"><div class="metric-label">Bu Hafta</div><div class="metric-value">${thisWeek}</div></div>
+    <div class="metric-card"><div class="metric-label">En Çok: ${enCok}</div><div class="metric-value" style="font-size:18px;">${a.dersler[enCok]?.toplam||0} soru</div></div>
+    <div class="metric-card"><div class="metric-label">En Fazla Devam</div><div class="metric-value amber" style="font-size:18px;">${enAz}</div></div>
+  `;
+}
+
+function renderPieChart() {
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  if (STATE.pieChartInstance) STATE.pieChartInstance.destroy();
+  const labels = Object.keys(STATE.analitik.dersler);
+  const data = labels.map(l => STATE.analitik.dersler[l].toplam);
+  const colors = ['#2563EB','#16A34A','#D97706','#7C3AED','#DC2626','#0891B2','#EA580C'];
+  if (!labels.length) return;
+  STATE.pieChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+function renderWeekChart() {
+  const ctx = document.getElementById('weekChart').getContext('2d');
+  if (STATE.weekChartInstance) STATE.weekChartInstance.destroy();
+  const days = [];
+  const labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toDateString();
+    labels.push(d.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric' }));
+    days.push(STATE.questions.filter(q => new Date(q.tarih).toDateString() === ds).length);
+  }
+  STATE.weekChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Yüklenen', data: days, borderColor: '#2563EB', backgroundColor: 'rgba(37,99,235,0.1)', tension: 0.4, fill: true, pointRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+}
+
+function renderAnalyticsTable() {
+  const rows = [];
+  for (const [ders, dersData] of Object.entries(STATE.analitik.dersler)) {
+    for (const [konu, konuData] of Object.entries(dersData.konular)) {
+      rows.push({ ders, konu, toplam: konuData.toplam, ogrenildi: konuData.ogrenildi, devam: konuData.devam, sonAktivite: konuData.sonAktivite });
+    }
+  }
+  rows.sort((a, b) => {
+    const av = a[tableSortKey] || '';
+    const bv = b[tableSortKey] || '';
+    const cmp = typeof av === 'number' ? av - bv : av.localeCompare(bv);
+    return tableSortAsc ? cmp : -cmp;
+  });
+  document.getElementById('analyticsTableBody').innerHTML = rows.map(r => {
+    const pct = r.toplam ? Math.round(r.ogrenildi/r.toplam*100) : 0;
+    return `<tr>
+      <td>${r.ders}</td>
+      <td>${r.konu}</td>
+      <td>${r.toplam}</td>
+      <td style="color:var(--green);font-weight:500;">${r.ogrenildi}</td>
+      <td style="color:var(--amber);font-weight:500;">${r.devam}</td>
+      <td style="width:120px;"><div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--text-muted);">${pct}%</span></td>
+      <td style="font-size:12px;color:var(--text-muted);">${formatDate(r.sonAktivite)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function sortTable(key) {
+  if (tableSortKey === key) tableSortAsc = !tableSortAsc;
+  else { tableSortKey = key; tableSortAsc = true; }
+  renderAnalyticsTable();
+}
+
+// ════════════════════════════════════════════════════
+// ── PROFİL
+// ════════════════════════════════════════════════════
+function renderProfil() {
+  if (!STATE.profile) return;
+  document.getElementById('profileName').value = STATE.profile.isim;
+  document.getElementById('profileSinavTuru').value = STATE.profile.sinavTuru;
+}
+
+async function saveProfile() {
+  const isim = document.getElementById('profileName').value.trim();
+  const sinavTuru = document.getElementById('profileSinavTuru').value;
+  if (!isim) { showToast('İsim boş olamaz.', 'error'); return; }
+  STATE.profile.isim = isim;
+  STATE.profile.sinavTuru = sinavTuru;
+  STATE.profile.guncellenmeTarihi = now();
+  try {
+    await driveUploadJSON('profil.json', STATE.profile, STATE.rootFolderId, STATE.profileFileId);
+    updateSidebar();
+    showToast('Profil kaydedildi.', 'success');
+  } catch (e) {
+    showToast('Kayıt başarısız: ' + e.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ── INIT
+// ════════════════════════════════════════════════════
+async function init() {
+  showLoader(true);
+
+  // Load config
+  STATE.clientId = localStorage.getItem('sa_client_id') || '';
+  STATE.geminiKey = localStorage.getItem('sa_gemini_key') || '';
+  STATE.rootFolderId = localStorage.getItem('sa_root_folder') || '';
+  STATE.sorularFolderId = localStorage.getItem('sa_sorular_folder') || '';
+  STATE.profileFileId = localStorage.getItem('sa_profile_file_id') || '';
+  STATE.analitikFileId = localStorage.getItem('sa_analitik_file_id') || '';
+
+  // No API keys → setup step 1
+  if (!STATE.clientId || !STATE.geminiKey) {
+    showLoader(false);
+    showScreen('screen-setup');
+    document.getElementById('setup-step-keys').style.display = 'block';
+    return;
+  }
+
+  // Handle OAuth callback
+  if (location.search.includes('code=')) {
+    const ok = await handleOAuthCallback();
+    if (!ok) {
+      showLoader(false);
+      showScreen('screen-setup');
+      document.getElementById('setup-step-keys').style.display = 'none';
+      document.getElementById('setup-step-auth').style.display = 'block';
+      return;
+    }
+  }
+
+  // Load tokens
+  loadTokens();
+
+  // No token → show auth
+  if (!STATE.accessToken) {
+    showLoader(false);
+    showScreen('screen-setup');
+    document.getElementById('setup-step-keys').style.display = 'none';
+    document.getElementById('setup-step-auth').style.display = 'block';
+    return;
+  }
+
+  // Ensure token valid
+  const tokenOk = await ensureToken();
+  if (!tokenOk) {
+    showLoader(false);
+    showScreen('screen-setup');
+    document.getElementById('setup-step-keys').style.display = 'none';
+    document.getElementById('setup-step-auth').style.display = 'block';
+    return;
+  }
+
+  // Init drive structure
+  try {
+    await initDriveStructure();
+  } catch (e) {
+    showLoader(false);
+    showToast('Drive bağlantısı başarısız: ' + e.message, 'error');
+    return;
+  }
+
+  // Load profile
+  try {
+    if (STATE.profileFileId) {
+      STATE.profile = await driveReadFile(STATE.profileFileId);
+    }
+    if (!STATE.profile) {
+      // Search for profile
+      const files = await driveListFiles(STATE.rootFolderId, 'application/json');
+      const pf = files.find(f => f.name === 'profil.json');
+      if (pf) {
+        STATE.profileFileId = pf.id;
+        localStorage.setItem('sa_profile_file_id', pf.id);
+        STATE.profile = await driveReadFile(pf.id);
+      }
+    }
+  } catch {}
+
+  if (!STATE.profile) {
+    showLoader(false);
+    showScreen('screen-setup');
+    document.getElementById('setup-step-keys').style.display = 'none';
+    document.getElementById('setup-step-auth').style.display = 'none';
+    document.getElementById('setup-step-profile').style.display = 'block';
+    return;
+  }
+
+  // Load analitik
+  try {
+    if (STATE.analitikFileId) {
+      STATE.analitik = await driveReadFile(STATE.analitikFileId);
+    }
+    if (!STATE.analitik) {
+      const files = await driveListFiles(STATE.rootFolderId, 'application/json');
+      const af = files.find(f => f.name === 'analitik.json');
+      if (af) {
+        STATE.analitikFileId = af.id;
+        localStorage.setItem('sa_analitik_file_id', af.id);
+        STATE.analitik = await driveReadFile(af.id);
+      }
+    }
+    if (!STATE.analitik) STATE.analitik = { toplamSoru: 0, dersler: {}, oturumGecmisi: [] };
+  } catch {
+    STATE.analitik = { toplamSoru: 0, dersler: {}, oturumGecmisi: [] };
+  }
+
+  // Load all questions
+  await loadAllQuestions();
+
+  showLoader(false);
+  showApp();
+}
+
+// Kick off
+init();
+</script>
+</body>
+</html>
