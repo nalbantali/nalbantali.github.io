@@ -357,6 +357,11 @@
           <div class="form-hint">Google Cloud Console → Kimlik Bilgileri → OAuth 2.0 İstemci Kimliği. "Yetkili yönlendirme URI'leri" alanına şu adresi <strong>birebir aynı</strong> şekilde eklemelisin: <code id="redirectUriHint" style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px; word-break:break-all;"></code> <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:10px;" onclick="copyRedirectUri()"><i class="ti ti-copy"></i> Kopyala</button></div>
         </div>
         <div class="form-group">
+          <label class="form-label">Google Client Secret</label>
+          <input type="password" class="form-input" id="setupClientSecret" placeholder="GOCSPX-...">
+          <div class="form-hint">Aynı Client ID'nin yanında "İstemci gizli anahtarı" (Client secret) olarak görünür. Google'ın Web application tipi token alışverişinde bunu zorunlu kılıyor; yalnızca bu tarayıcıda saklanır, hiçbir sunucuya gönderilmez.</div>
+        </div>
+        <div class="form-group">
           <label class="form-label">Gemini API Key</label>
           <input type="password" class="form-input" id="setupGeminiKey" placeholder="AIza...">
           <div class="form-hint">Google AI Studio üzerinden ücretsiz alabilirsiniz</div>
@@ -776,6 +781,7 @@ async function handleOAuthCallback() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: STATE.clientId,
+        client_secret: STATE.clientSecret,
         code_verifier: verifier,
         code,
         grant_type: 'authorization_code',
@@ -817,6 +823,7 @@ async function ensureToken() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: STATE.clientId,
+        client_secret: STATE.clientSecret,
         refresh_token: STATE.refreshToken,
         grant_type: 'refresh_token',
       })
@@ -845,6 +852,7 @@ function logout() {
 function resetApiKeys() {
   if (!confirm('Client ID ve Gemini API Key sıfırlanacak, tekrar giriş yapman gerekecek. Drive\'daki sorular ve arşivin silinmeyecek. Devam edilsin mi?')) return;
   localStorage.removeItem('sa_client_id');
+  localStorage.removeItem('sa_client_secret');
   localStorage.removeItem('sa_gemini_key');
   localStorage.removeItem('sa_access_token');
   localStorage.removeItem('sa_refresh_token');
@@ -1019,15 +1027,20 @@ function showSetupError(stepId, msg) {
 function saveSetup() {
   showSetupError('setup-keys-error', '');
   const cid = document.getElementById('setupClientId').value.trim();
+  const csecret = document.getElementById('setupClientSecret').value.trim();
   const gkey = document.getElementById('setupGeminiKey').value.trim();
 
-  if (!cid || !gkey) {
-    showSetupError('setup-keys-error', 'Lütfen her iki alanı da doldurun.');
+  if (!cid || !csecret || !gkey) {
+    showSetupError('setup-keys-error', 'Lütfen tüm alanları doldurun.');
     return;
   }
   // Basit format doğrulaması — yaygın yanlış girişleri burada yakala
   if (!/\.apps\.googleusercontent\.com$/.test(cid)) {
     showSetupError('setup-keys-error', 'Client ID ".apps.googleusercontent.com" ile bitmeli. Google Cloud Console → Kimlik Bilgileri sayfasından "OAuth 2.0 İstemci Kimlikleri" altındaki değeri kopyaladığından emin ol.');
+    return;
+  }
+  if (/\s/.test(csecret)) {
+    showSetupError('setup-keys-error', 'Client Secret içinde boşluk var gibi görünüyor, tekrar kopyala-yapıştır yapmayı dene.');
     return;
   }
   // Not: Gemini key formatı zamanla değişebilir, bu yüzden sadece çok temel bir uzunluk
@@ -1038,8 +1051,10 @@ function saveSetup() {
   }
 
   localStorage.setItem('sa_client_id', cid);
+  localStorage.setItem('sa_client_secret', csecret);
   localStorage.setItem('sa_gemini_key', gkey);
   STATE.clientId = cid;
+  STATE.clientSecret = csecret;
   STATE.geminiKey = gkey;
   showSetupError('setup-auth-error', '');
   document.getElementById('setup-step-keys').style.display = 'none';
@@ -1049,6 +1064,7 @@ function saveSetup() {
 function backToKeysStep() {
   // Adım 2'den adım 1'e dön; mevcut değerleri input'lara geri doldur ki kullanıcı sıfırdan yazmasın
   document.getElementById('setupClientId').value = STATE.clientId || '';
+  document.getElementById('setupClientSecret').value = STATE.clientSecret || '';
   document.getElementById('setupGeminiKey').value = STATE.geminiKey || '';
   showSetupError('setup-auth-error', '');
   document.getElementById('setup-step-auth').style.display = 'none';
@@ -1845,6 +1861,7 @@ async function init() {
 
   // Load config
   STATE.clientId = localStorage.getItem('sa_client_id') || '';
+  STATE.clientSecret = localStorage.getItem('sa_client_secret') || '';
   STATE.geminiKey = localStorage.getItem('sa_gemini_key') || '';
   STATE.rootFolderId = localStorage.getItem('sa_root_folder') || '';
   STATE.sorularFolderId = localStorage.getItem('sa_sorular_folder') || '';
@@ -1852,10 +1869,11 @@ async function init() {
   STATE.analitikFileId = localStorage.getItem('sa_analitik_file_id') || '';
 
   // No API keys → setup step 1
-  if (!STATE.clientId || !STATE.geminiKey) {
+  if (!STATE.clientId || !STATE.clientSecret || !STATE.geminiKey) {
     showLoader(false);
     showScreen('screen-setup');
     document.getElementById('setupClientId').value = STATE.clientId;
+    document.getElementById('setupClientSecret').value = STATE.clientSecret;
     document.getElementById('setupGeminiKey').value = STATE.geminiKey;
     document.getElementById('setup-step-keys').style.display = 'block';
     document.getElementById('setup-step-auth').style.display = 'none';
