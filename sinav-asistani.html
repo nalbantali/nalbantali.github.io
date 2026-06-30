@@ -870,20 +870,25 @@ async function driveReq(path, opts={}) {
     headers: { Authorization: `Bearer ${STATE.accessToken}`, ...(opts.headers || {}) }
   });
   if (res.status === 429) throw new Error('QUOTA_EXCEEDED');
-  if (!res.ok) throw new Error(`Drive API ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
+    throw new Error(`Drive API ${res.status}${detail}`);
+  }
   if (res.status === 204) return null;
   return res.json();
 }
 
 async function driveListFiles(parentId, mimeType) {
-  let q = `'${parentId}' in parents and trashed=false`;
+  const parent = parentId || 'root';
+  let q = `'${parent}' in parents and trashed=false`;
   if (mimeType) q += ` and mimeType='${mimeType}'`;
   const data = await driveReq(`/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime)&pageSize=1000`);
   return data.files || [];
 }
 
 async function driveCreateFolder(name, parentId) {
-  const meta = { name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : [] };
+  const meta = { name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId || 'root'] };
   const data = await driveReq('/files', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -909,7 +914,7 @@ async function driveUploadJSON(filename, data, parentId, existingId) {
     });
     return existingId;
   }
-  const meta = { name: filename, parents: parentId ? [parentId] : [] };
+  const meta = { name: filename, parents: [parentId || 'root'] };
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
   form.append('file', blob);
@@ -1105,7 +1110,17 @@ async function createProfile() {
 // ── DRIVE STRUCTURE INIT
 // ════════════════════════════════════════════════════
 async function initDriveStructure() {
-  STATE.rootFolderId = await driveGetOrCreateFolder('SinavAsistani', null);
+  try {
+    STATE.rootFolderId = await driveGetOrCreateFolder('SinavAsistani', null);
+  } catch (e) {
+    // Önceki başarısız denemelerden kalma geçersiz bir ID localStorage'da kalmış olabilir.
+    // Temizleyip kökten (root) tekrar dene.
+    localStorage.removeItem('sa_root_folder');
+    localStorage.removeItem('sa_sorular_folder');
+    localStorage.removeItem('sa_profile_file_id');
+    localStorage.removeItem('sa_analitik_file_id');
+    STATE.rootFolderId = await driveGetOrCreateFolder('SinavAsistani', null);
+  }
   localStorage.setItem('sa_root_folder', STATE.rootFolderId);
   STATE.sorularFolderId = await driveGetOrCreateFolder('sorular', STATE.rootFolderId);
   localStorage.setItem('sa_sorular_folder', STATE.sorularFolderId);
