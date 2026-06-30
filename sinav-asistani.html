@@ -185,12 +185,13 @@
   .empty-state p { font-size: 13px; }
 
   /* ── UPLOAD SCREEN ────────────────────────────────── */
-  .upload-area { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 40px 30px; text-align: center; transition: all .2s; }
+  .upload-area { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 48px 30px 40px; text-align: center; transition: all .2s; cursor: pointer; }
   .upload-area:hover, .upload-area.drag-over { border-color: var(--primary); background: var(--primary-light); }
-  .upload-area i { font-size: 48px; color: var(--text-light); margin-bottom: 12px; display: block; }
-  .upload-area.drag-over i { color: var(--primary); }
+  .upload-area i { font-size: 52px; color: var(--text-light); margin-bottom: 14px; display: block; transition: color .2s; }
+  .upload-area:hover i, .upload-area.drag-over i { color: var(--primary); }
   .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
   .upload-sub { font-size: 13px; color: var(--text-muted); }
+  .upload-btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; padding: 20px 0 4px; }
   .upload-progress { display: none; }
   .progress-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
   .progress-step { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
@@ -639,18 +640,20 @@
           <div class="page-sub">Soru görselini yükle, yapay zeka analiz etsin</div>
         </div>
         <div class="card">
-          <div class="upload-area" id="uploadArea" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <!-- Drag & drop alanı — butonlardan ayrı -->
+          <div class="upload-area" id="uploadArea" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('fileInput').click()">
             <i class="ti ti-photo-up"></i>
             <div class="upload-title">Görseli Buraya Sürükle</div>
-            <div class="upload-sub">ya da aşağıdan seç</div>
-            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px;">
-              <button class="btn btn-primary" onclick="document.getElementById('fileInput').click(); event.stopPropagation();">
-                <i class="ti ti-folder-open"></i> Dosya Seç
-              </button>
-              <button class="btn btn-secondary camera-btn" onclick="document.getElementById('cameraInput').click(); event.stopPropagation();" style="display:none;">
-                <i class="ti ti-camera"></i> Fotoğraf Çek
-              </button>
-            </div>
+            <div class="upload-sub">PNG, JPG, WEBP • veya aşağıdaki butonları kullan</div>
+          </div>
+          <!-- Butonlar — alanın dışında, altında -->
+          <div class="upload-btn-row" id="uploadBtnRow">
+            <button class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+              <i class="ti ti-folder-open"></i> Dosyadan Seç
+            </button>
+            <button class="btn btn-secondary btn-lg camera-btn" onclick="document.getElementById('cameraInput').click()" style="display:none;">
+              <i class="ti ti-camera"></i> Fotoğraf Çek
+            </button>
           </div>
           <!-- Galeri seçimi (tüm cihazlar) -->
           <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
@@ -1271,40 +1274,97 @@ async function evictImageCache(fileId) {
 // ════════════════════════════════════════════════════
 async function geminiAnalyze(imageBase64, mimeType) {
   const { isim, sinavTuru } = STATE.profile;
-  const prompt = `Sen ${sinavTuru} sınavına hazırlanan ${isim} adlı bir öğrencinin soru çözme asistanısın.
-Verilen soru görselini analiz et ve YALNIZCA aşağıdaki JSON formatında yanıt ver.
-Türkçe yaz. JSON dışında hiçbir şey yazma, markdown backtick kullanma.
 
-{"ders":"","konu":"","zorluk":"Kolay|Orta|Zor","cozum":{"gorselGerekli":false,"svg":null,"ozet":"","anaKavram":"","adimlar":[""],"sonuc":"","sikYapilanHata":"","sinavTuyu":"","baglantiKonular":[""]}}
+  // Alanları ayrı ayrı istiyoruz — uzun JSON tek blokta kesilmesin diye
+  const prompt = `Sen ${sinavTuru} sınavına hazırlanan ${isim} adlı öğrencinin soru çözme asistanısın.
+Görseldeki soruyu analiz et. YALNIZCA aşağıdaki JSON yapısını döndür, başka hiçbir şey yazma, markdown kullanma.
 
-gorselGerekli: geometri/grafik/devre için true, svg üret; değilse false, svg null.
-anaKavram: formül veya teorem.
-adimlar: her adım ayrı string, LaTeX kullanma, düz metin.`;
+{
+  "ders": "dersin adı",
+  "konu": "konunun adı",
+  "zorluk": "Kolay",
+  "cozum": {
+    "gorselGerekli": false,
+    "svg": null,
+    "ozet": "tek cümle özet",
+    "anaKavram": "kullanılan formül veya kural",
+    "adimlar": ["1. adım", "2. adım"],
+    "sonuc": "sonuç ifadesi",
+    "sikYapilanHata": "sık hata",
+    "sinavTuyu": "sınav ipucu",
+    "baglantiKonular": ["konu1", "konu2"]
+  }
+}
 
-  const body = {
-    contents: [{
-      parts: [
-        { inline_data: { mime_type: mimeType, data: imageBase64 } },
-        { text: prompt }
-      ]
-    }],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+Kurallar:
+- zorluk yalnızca: Kolay, Orta veya Zor
+- adimlar kısa ve net, formüller düz metin (LaTeX yok)
+- gorselGerekli sadece geometri/grafik/devre varsa true, svg o zaman dolu
+- Tüm metinler Türkçe`;
+
+  const callGemini = async () => {
+    const body = {
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imageBase64 } },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 8192,        // yeterince büyük — kesme olmaz
+        responseMimeType: 'application/json' // JSON modu: Gemini JSON üretmeye zorlanır
+      }
+    };
+    const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const e = await res.json(); detail = e?.error?.message ? ' — ' + e.error.message : ''; } catch {}
+      throw new Error(`Gemini ${res.status}${detail}`);
+    }
+    return res.json();
   };
 
-  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    let detail = '';
-    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
-    throw new Error(`Gemini ${res.status}${detail}`);
+  // İlk deneme
+  let data = await callGemini();
+  let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // finishReason STOP değilse (MAX_TOKENS vb.) bir kez retry
+  const finishReason = data.candidates?.[0]?.finishReason;
+  if (finishReason && finishReason !== 'STOP') {
+    console.warn('Gemini finishReason:', finishReason, '— retrying without responseMimeType');
+    // responseMimeType'sız fallback (bazı modellerde JSON modu farklı davranır)
+    const fallbackBody = {
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mimeType, data: imageBase64 } },
+          { text: prompt }
+        ]
+      }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+    };
+    const res2 = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fallbackBody)
+    });
+    if (res2.ok) { data = await res2.json(); text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''; }
   }
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  return JSON.parse(clean);
+
+  // JSON temizle: fence, BOM, boşluklar
+  const clean = text
+    .replace(/^```json\s*/i, '').replace(/```\s*$/,'')
+    .replace(/^﻿/, '').trim();
+
+  try {
+    return JSON.parse(clean);
+  } catch (parseErr) {
+    // Hata ayıklama: ilk 200 karakteri logla
+    console.error('JSON parse hatası. Ham yanıt (ilk 300 kr):', clean.slice(0, 300));
+    throw new Error('Gemini geçersiz JSON döndürdü — lütfen tekrar deneyin. (' + parseErr.message + ')');
+  }
 }
 
 async function geminiChat(userMsg, cozum, imageBase64, mimeType) {
@@ -1637,8 +1697,10 @@ let uploadFile = null;
 
 function resetUpload() {
   uploadFile = null;
-  document.getElementById('uploadArea').style.display = 'flex';
+  document.getElementById('uploadArea').style.display = 'block';
   document.getElementById('uploadArea').className = 'upload-area';
+  const btnRow = document.getElementById('uploadBtnRow');
+  if (btnRow) btnRow.style.display = 'flex';
   document.getElementById('uploadProgress').style.display = 'none';
   document.getElementById('uploadPreview').style.display = 'none';
   ['step1','step2','step3'].forEach(id => {
@@ -1687,6 +1749,8 @@ function setStep(id, state, statusText='') {
 
 async function startUpload(file) {
   document.getElementById('uploadArea').style.display = 'none';
+  const btnRow = document.getElementById('uploadBtnRow');
+  if (btnRow) btnRow.style.display = 'none';
   document.getElementById('uploadProgress').style.display = 'block';
 
   try {
