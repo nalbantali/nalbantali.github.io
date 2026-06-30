@@ -280,21 +280,166 @@
   .counter-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
   .btn-learned.active { background: var(--green); color: #fff; }
 
-  /* ── CHAT PANEL ────────────────────────────────── */
-  .chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200; display: none; }
-  .chat-panel { position: fixed; bottom: 0; left: 0; right: 0; height: 70vh; background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-md); z-index: 201; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(0.4,0,0.2,1); }
-  .chat-panel.open { transform: translateY(0); }
-  .chat-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-  .chat-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
-  .chat-summary { padding: 12px 20px; background: var(--primary-light); border-bottom: 1px solid var(--border); font-size: 12px; color: #1E40AF; }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
-  .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
-  .chat-bubble.user { background: var(--primary); color: #fff; align-self: flex-end; border-radius: 14px 14px 3px 14px; }
-  .chat-bubble.ai { background: var(--bg); border: 1px solid var(--border); align-self: flex-start; border-radius: 14px 14px 14px 3px; }
-  .chat-bubble.thinking { color: var(--text-muted); font-style: italic; }
-  .chat-input-row { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
-  .chat-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; outline: none; resize: none; height: 42px; }
-  .chat-input:focus { border-color: var(--primary); }
+  /* ── FLOATING CHATBOT ────────────────────────────── */
+  /* FAB (Floating Action Button) */
+  .chat-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 210;
+    display: none; /* JS ile gösterilir */
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .chat-fab.pos-left { align-items: flex-start; right: auto; left: 28px; }
+  .chat-fab-btn {
+    width: 56px; height: 56px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.18s, box-shadow 0.18s;
+    position: relative;
+  }
+  .chat-fab-btn:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(37,99,235,0.45); }
+  .chat-fab-btn i { font-size: 26px; color: #fff; }
+  .chat-fab-switch {
+    width: 28px; height: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: absolute;
+    top: -6px; left: -6px;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.12s;
+  }
+  .chat-fab-switch:hover { background: var(--bg); }
+  .chat-fab-switch i { font-size: 13px; color: var(--text-muted); }
+  .chat-fab-label {
+    font-size: 11px; font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Chatbot panel */
+  .chatbot-panel {
+    position: fixed;
+    bottom: 100px;
+    right: 28px;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    height: 560px;
+    max-height: calc(100vh - 140px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    z-index: 209;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    opacity: 0; pointer-events: none;
+    transform: translateY(16px) scale(0.97);
+    transition: opacity 0.2s, transform 0.2s;
+    transform-origin: bottom right;
+  }
+  .chatbot-panel.pos-left {
+    right: auto; left: 28px;
+    transform-origin: bottom left;
+  }
+  .chatbot-panel.open {
+    opacity: 1; pointer-events: all;
+    transform: translateY(0) scale(1);
+  }
+  .chatbot-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .chatbot-header-icon {
+    width: 34px; height: 34px;
+    background: var(--primary-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .chatbot-header-icon i { font-size: 18px; color: var(--primary); }
+  .chatbot-header-info { flex: 1; min-width: 0; }
+  .chatbot-header-info strong { font-size: 13px; font-weight: 600; display: block; }
+  .chatbot-header-info span { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .chatbot-header-actions { display: flex; gap: 4px; }
+  .chatbot-header-actions button {
+    width: 30px; height: 30px;
+    border-radius: var(--radius);
+    border: none; background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s;
+    font-size: 15px;
+  }
+  .chatbot-header-actions button:hover { background: var(--bg); color: var(--text); }
+  .chatbot-context-bar {
+    padding: 10px 16px;
+    background: var(--primary-light);
+    border-bottom: 1px solid #BFDBFE;
+    font-size: 12px; color: #1E40AF;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  .chatbot-messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .chatbot-bubble { max-width: 85%; padding: 10px 13px; font-size: 13px; line-height: 1.6; border-radius: 14px; word-break: break-word; }
+  .chatbot-bubble.user { background: var(--primary); color: #fff; align-self: flex-end; border-radius: 14px 14px 3px 14px; }
+  .chatbot-bubble.ai { background: var(--bg); border: 1px solid var(--border); align-self: flex-start; border-radius: 14px 14px 14px 3px; }
+  .chatbot-bubble.thinking { color: var(--text-muted); font-style: italic; }
+  .chatbot-input-row {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+    flex-shrink: 0;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .chatbot-input {
+    flex: 1; padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 13px; font-family: inherit;
+    outline: none; resize: none;
+    max-height: 100px; min-height: 38px;
+    background: var(--bg);
+    transition: border-color 0.15s;
+    line-height: 1.5;
+  }
+  .chatbot-input:focus { border-color: var(--primary); }
+  .chatbot-send {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: var(--primary); border: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.12s;
+  }
+  .chatbot-send:hover { background: #1D4ED8; }
+  .chatbot-send i { font-size: 16px; color: #fff; }
+  .chatbot-divider { text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0; }
+
+  @media (max-width: 768px) {
+    .chat-fab { bottom: calc(var(--mobile-nav-h, 64px) + 16px); }
+    .chatbot-panel { bottom: calc(var(--mobile-nav-h, 64px) + 80px); width: calc(100vw - 32px); height: 50vh; }
+  }
 
   /* ── LIGHTBOX ────────────────────────────────── */
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
@@ -403,18 +548,49 @@
 </div>
 
 <!-- CHAT PANEL -->
-<div class="chat-overlay" id="chatOverlay" onclick="closeChat()"></div>
-<div class="chat-panel" id="chatPanel">
-  <div class="chat-header">
-    <i class="ti ti-message-circle" style="color: var(--primary); font-size: 18px;"></i>
-    <h3>Soru Sor</h3>
-    <button class="btn btn-ghost btn-icon" onclick="closeChat()"><i class="ti ti-x"></i></button>
+<!-- FLOATING CHATBOT FAB -->
+<div class="chat-fab" id="chatFab">
+  <div class="chat-fab-label" id="chatFabLabel">Soru Sor</div>
+  <button class="chat-fab-btn" id="chatFabBtn" onclick="toggleChatbot()">
+    <i class="ti ti-message-circle"></i>
+    <button class="chat-fab-switch" onclick="switchChatSide(event)" title="Sol/Sağ değiştir">
+      <i class="ti ti-arrows-left-right"></i>
+    </button>
+  </button>
+</div>
+
+<!-- FLOATING CHATBOT PANEL -->
+<div class="chatbot-panel" id="chatbotPanel">
+  <div class="chatbot-header">
+    <div class="chatbot-header-icon" id="chatbotHeaderIcon">
+      <i class="ti ti-message-circle"></i>
+    </div>
+    <div class="chatbot-header-info">
+      <strong id="chatbotHeaderTitle">Soru Asistanı</strong>
+      <span id="chatbotHeaderSub">Bu soru hakkında sorularını sor</span>
+    </div>
+    <div class="chatbot-header-actions">
+      <button onclick="switchChatSide(event)" title="Sol/Sağ taraf">
+        <i class="ti ti-arrows-left-right"></i>
+      </button>
+      <button onclick="clearChatbot()" title="Sohbeti temizle">
+        <i class="ti ti-trash"></i>
+      </button>
+      <button onclick="toggleChatbot()" title="Kapat">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
   </div>
-  <div class="chat-summary" id="chatSummary"></div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input-row">
-    <textarea class="chat-input" id="chatInput" placeholder="Aklında takılan bir şey mi var?" onkeydown="chatKeydown(event)"></textarea>
-    <button class="btn btn-primary" onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
+  <div class="chatbot-context-bar" id="chatbotContextBar"></div>
+  <div class="chatbot-messages" id="chatbotMessages"></div>
+  <div class="chatbot-input-row">
+    <textarea class="chatbot-input" id="chatbotInput"
+      placeholder="Aklında takılan bir şey mi var?" rows="1"
+      onkeydown="chatbotKeydown(event)"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button class="chatbot-send" onclick="sendChatbotMessage()">
+      <i class="ti ti-send"></i>
+    </button>
   </div>
 </div>
 
@@ -714,9 +890,14 @@
 
       <!-- ANALİZ -->
       <div id="page-analiz" class="page" style="display:none;">
-        <div class="page-header">
-          <div class="page-title">Analiz</div>
-          <div class="page-sub">Çalışma istatistiklerin</div>
+        <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div class="page-title">Analiz</div>
+            <div class="page-sub">Çalışma istatistiklerin</div>
+          </div>
+          <button class="btn btn-primary" onclick="openAnalizChat()" style="gap:8px;">
+            <i class="ti ti-brain"></i> Birlikte Analiz Edelim
+          </button>
         </div>
         <div class="summary-cards" id="analysisSummary" style="margin-bottom:20px;"></div>
         <div class="analytics-grid">
@@ -778,7 +959,17 @@
         </div>
 
         <div class="card profile-card" style="margin-top:16px;">
-          <div class="form-label" style="margin-bottom:8px;">Gemini Modeli</div>
+          <div class="form-label" style="margin-bottom:8px;">Yapay Zeka Asistanı Konumu</div>
+          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Ekranın sağ alt veya sol alt köşesini tercih edebilirsin. Buton üzerindeki ↔ işaretiyle de anlık olarak değiştirebilirsin.</p>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" id="chatPosRightBtn" onclick="setChatPosition('right')">
+              <i class="ti ti-layout-sidebar-right"></i> Sağ Köşe
+            </button>
+            <button class="btn btn-secondary" id="chatPosLeftBtn" onclick="setChatPosition('left')">
+              <i class="ti ti-layout-sidebar-left"></i> Sol Köşe
+            </button>
+          </div>
+        </div>
           <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Google zaman zaman yeni Gemini modelleri çıkarır veya eski modelleri kaldırır. Bir model artık çalışmıyorsa (örn. "model bulunamadı" hatası alıyorsan), kodu değiştirmene gerek yok — güncel model adını buraya yazman yeterli.</p>
           <div class="form-group">
             <input type="text" class="form-input" id="profileGeminiModel" placeholder="gemini-2.5-flash">
@@ -1397,9 +1588,54 @@ Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, başta
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
 }
 
-// ════════════════════════════════════════════════════
-// ── SETUP
-// ════════════════════════════════════════════════════
+async function geminiAnalizChat(userMsg) {
+  const { isim, sinavTuru } = STATE.profile;
+  const a = STATE.analitik;
+  const history = STATE.chatHistory.map(m =>
+    `${m.role === 'user' ? isim : 'Koç'}: ${m.content}`
+  ).join('\n');
+
+  const analizJson = JSON.stringify({
+    toplamSoru: a?.toplamSoru || 0,
+    dersler: a?.dersler || {},
+    oturumGecmisi: a?.oturumGecmisi?.slice(-7) || []
+  });
+
+  const sysPrompt = `Sen deneyimli bir ${sinavTuru || 'sınav'} koçusun. Öğrencinin adı ${isim}.
+Aşağıdaki istatistikler öğrencinin arşivlediği sorulara ait analiz verileridir:
+${analizJson}
+
+Sohbet geçmişi:
+${history}
+
+Öğrencinin mesajı: ${userMsg}
+
+Talimatlar:
+- Profesyonel ama sıcak bir sınav koçu gibi davran
+- Verilere dayalı, spesifik ve kişiselleştirilmiş tavsiyeler ver
+- Zayıf konulara dikkat çek, güçlü yönleri tebrik et
+- Somut çalışma önerileri sun (örn. "Bu hafta integrali günde 3 soru ile pekiştir")
+- Öğrenciyi motive et ama gerçekçi ol
+- Türkçe yaz, kısa ve net paragraflar kullan`;
+
+  const body = {
+    contents: [{ parts: [{ text: sysPrompt }] }],
+    generationConfig: { temperature: 0.6, maxOutputTokens: 1024 }
+  };
+
+  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
+    throw new Error(`Gemini ${res.status}${detail}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
+}
+
+
 function showSetupError(stepId, msg) {
   const el = document.getElementById(stepId);
   if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
@@ -1593,6 +1829,17 @@ function navigate(page) {
     n.classList.toggle('active', n.dataset.screen === page);
   });
 
+  // Chatbot FAB: analiz sayfasında göster (koç modu), diğerlerinde gizle
+  // Soru detayında ayrıca openSoruChat() çağrıldığında gösterilir
+  if (page === 'analiz') {
+    showChatFab('Eğitim Koçun');
+  } else {
+    // Detay sayfasından ayrılınca paneli kapat ve FAB'ı gizle
+    if (page !== 'detay') {
+      hideChatFab();
+    }
+  }
+
   // Load page data
   if (page === 'dashboard') renderDashboard();
   if (page === 'arsiv') renderArchive();
@@ -1605,6 +1852,8 @@ function showApp() {
   showScreen('screen-app');
   updateSidebar();
   navigate('dashboard');
+  // Chat pozisyonunu uygula (kayıtlı tercih)
+  applyChatPosition(getChatPosition());
   // Mobil cihazlarda kamera butonunu göster
   if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
     document.querySelectorAll('.camera-btn').forEach(b => b.style.display = 'inline-flex');
@@ -1930,6 +2179,12 @@ async function openQuestion(id) {
   STATE.currentQuestion = q;
   STATE.chatHistory = [];
 
+  // Chatbot sıfırla (yeni soru)
+  chatbotMode = null;
+  chatbotImageBase64 = null;
+  chatbotImageMime = null;
+  closeChatbot();
+
   // Increment view count
   q.goruntulemeSayisi = (q.goruntulemeSayisi || 0) + 1;
   q.sonGoruntuleme = now();
@@ -1937,6 +2192,9 @@ async function openQuestion(id) {
 
   navigate('detay');
   renderDetail(q);
+
+  // FAB göster (Soru Sor modu)
+  showChatFab('Soru Sor');
 }
 
 async function saveQuestionToFile(q) {
@@ -2040,7 +2298,7 @@ function renderDetail(q) {
     <button class="btn btn-amber" onclick="setDevam()" ${!isLearned ? 'disabled' : ''} id="btnDevam">
       <i class="ti ti-refresh"></i> Devam Ediyorum
     </button>
-    <button class="btn btn-secondary" onclick="openChat()">
+    <button class="btn btn-secondary" onclick="openSoruChat()">
       <i class="ti ti-message-circle"></i> Soru Sor
     </button>
     <button class="btn btn-secondary" onclick="openEditModal()" title="Ders/Konu düzenle">
@@ -2191,73 +2449,239 @@ async function confirmDelete() {
 }
 
 // ════════════════════════════════════════════════════
-// ── CHAT
+// ── FLOATING CHATBOT
 // ════════════════════════════════════════════════════
-let chatImageBase64 = null;
-let chatImageMime = null;
 
-function openChat() {
+// Chatbot modu: 'soru' | 'analiz'
+let chatbotMode = null;
+let chatbotImageBase64 = null;
+let chatbotImageMime = null;
+
+// --- Pozisyon yönetimi ---
+function getChatPosition() {
+  return localStorage.getItem('sa_chat_pos') || 'right';
+}
+
+function setChatPosition(side) {
+  localStorage.setItem('sa_chat_pos', side);
+  applyChatPosition(side);
+  // Profil butonlarını güncelle
+  const rBtn = document.getElementById('chatPosRightBtn');
+  const lBtn = document.getElementById('chatPosLeftBtn');
+  if (rBtn) rBtn.style.fontWeight = side === 'right' ? '700' : '';
+  if (lBtn) lBtn.style.fontWeight = side === 'left' ? '700' : '';
+}
+
+function applyChatPosition(side) {
+  const fab = document.getElementById('chatFab');
+  const panel = document.getElementById('chatbotPanel');
+  if (!fab || !panel) return;
+  if (side === 'left') {
+    fab.classList.add('pos-left');
+    panel.classList.add('pos-left');
+  } else {
+    fab.classList.remove('pos-left');
+    panel.classList.remove('pos-left');
+  }
+}
+
+function switchChatSide(e) {
+  if (e) e.stopPropagation();
+  const current = getChatPosition();
+  setChatPosition(current === 'right' ? 'left' : 'right');
+}
+
+// --- FAB görünürlüğü ---
+function showChatFab(label) {
+  const fab = document.getElementById('chatFab');
+  const lbl = document.getElementById('chatFabLabel');
+  if (!fab) return;
+  fab.style.display = 'flex';
+  if (lbl) lbl.textContent = label || 'Soru Sor';
+  applyChatPosition(getChatPosition());
+}
+
+function hideChatFab() {
+  const fab = document.getElementById('chatFab');
+  if (fab) fab.style.display = 'none';
+  closeChatbot();
+}
+
+// --- Panel aç/kapat ---
+function toggleChatbot() {
+  const panel = document.getElementById('chatbotPanel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    closeChatbot();
+  } else {
+    // Analiz sayfasındaysa ve henüz analiz modu açılmadıysa direkt aç
+    if (STATE.currentPage === 'analiz' && chatbotMode !== 'analiz') {
+      openAnalizChat();
+    } else if (STATE.currentPage === 'detay' && chatbotMode !== 'soru') {
+      openSoruChat();
+    } else {
+      panel.classList.add('open');
+      setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
+    }
+  }
+}
+
+function closeChatbot() {
+  const panel = document.getElementById('chatbotPanel');
+  if (panel) panel.classList.remove('open');
+}
+
+function clearChatbot() {
+  const msgs = document.getElementById('chatbotMessages');
+  if (msgs) msgs.innerHTML = '';
+  STATE.chatHistory = [];
+  chatbotImageBase64 = null;
+  chatbotImageMime = null;
+}
+
+// --- SORU modu ---
+function openSoruChat() {
   const q = STATE.currentQuestion;
-  document.getElementById('chatSummary').textContent = `📌 ${q.ders} — ${q.konu}: ${q.cozum.ozet}`;
-  document.getElementById('chatMessages').innerHTML = '<div class="chat-bubble ai">Merhaba! Bu soru hakkında aklına takılan bir şey mi var? Sormaktan çekinme. 😊</div>';
-  document.getElementById('chatOverlay').style.display = 'block';
-  document.getElementById('chatPanel').classList.add('open');
+  if (!q) return;
 
-  // Preload image for chat (token ile indir)
+  chatbotMode = 'soru';
+  STATE.chatHistory = [];
+  chatbotImageBase64 = null;
+  chatbotImageMime = null;
+
+  // Header
+  document.getElementById('chatbotHeaderIcon').innerHTML = '<i class="ti ti-message-circle"></i>';
+  document.getElementById('chatbotHeaderTitle').textContent = 'Soru Asistanı';
+  document.getElementById('chatbotHeaderSub').textContent = `${q.ders} — ${q.konu}`;
+  document.getElementById('chatbotContextBar').textContent = `📌 ${q.cozum?.ozet || 'Soru analizi'}`;
+
+  // İlk mesaj
+  const msgs = document.getElementById('chatbotMessages');
+  msgs.innerHTML = `<div class="chatbot-bubble ai">Merhaba! <strong>${q.ders} — ${q.konu}</strong> sorusu hakkında aklında takılan bir şey mi var? Sormaktan çekinme 😊</div>`;
+
+  // Sorunun görselini arka planda yükle (Gemini'ye gönderilecek)
   if (q.resimDriveId) {
     ensureToken().then(() =>
       fetch(`${DRIVE_API}/files/${q.resimDriveId}?alt=media`, {
         headers: { Authorization: `Bearer ${STATE.accessToken}` }
       })
-    )
-      .then(r => r.blob())
-      .then(blob => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          chatImageBase64 = e.target.result.split(',')[1];
-          chatImageMime = blob.type;
-        };
-        reader.readAsDataURL(blob);
-      }).catch(() => {});
+    ).then(r => r.blob()).then(blob => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        chatbotImageBase64 = e.target.result.split(',')[1];
+        chatbotImageMime = blob.type;
+      };
+      reader.readAsDataURL(blob);
+    }).catch(() => {});
+  }
+
+  showChatFab('Soru Sor');
+  // Otomatik aç
+  const panel = document.getElementById('chatbotPanel');
+  if (panel) {
+    panel.classList.add('open');
+    setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
   }
 }
 
-function closeChat() {
-  document.getElementById('chatPanel').classList.remove('open');
-  document.getElementById('chatOverlay').style.display = 'none';
+// --- ANALİZ modu ---
+function openAnalizChat() {
+  chatbotMode = 'analiz';
+  STATE.chatHistory = [];
+  chatbotImageBase64 = null;
+  chatbotImageMime = null;
+
+  const a = STATE.analitik;
+  const isim = STATE.profile?.isim || 'Öğrenci';
+  const sinavTuru = STATE.profile?.sinavTuru || '';
+
+  // Header
+  document.getElementById('chatbotHeaderIcon').innerHTML = '<i class="ti ti-brain"></i>';
+  document.getElementById('chatbotHeaderTitle').textContent = 'Eğitim Koçun';
+  document.getElementById('chatbotHeaderSub').textContent = `${isim} · ${sinavTuru} Analiz`;
+  document.getElementById('chatbotContextBar').textContent = `📊 ${a?.toplamSoru || 0} soru analiz ediliyor — koçun hazır!`;
+
+  // Koç açılış mesajı
+  const msgs = document.getElementById('chatbotMessages');
+  const ozetMetin = buildAnalizOzeti(a, isim, sinavTuru);
+  msgs.innerHTML = `<div class="chatbot-bubble ai">${ozetMetin}</div>`;
+  STATE.chatHistory.push({ role: 'assistant', content: ozetMetin });
+
+  showChatFab('Eğitim Koçun');
+  const panel = document.getElementById('chatbotPanel');
+  if (panel) {
+    panel.classList.add('open');
+    setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
+  }
 }
 
-function chatKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+function buildAnalizOzeti(a, isim, sinavTuru) {
+  if (!a || a.toplamSoru === 0) {
+    return `Merhaba <strong>${isim}</strong>! Henüz hiç soru yüklememişsin. Arşive soru ekledikten sonra birlikte analiz edebiliriz 🎯`;
+  }
+  const total = a.toplamSoru;
+  const ogrenildi = Object.values(a.dersler || {}).reduce((s, d) => s + (d.ogrenildi || 0), 0);
+  const devam = total - ogrenildi;
+  const oran = total > 0 ? Math.round((ogrenildi / total) * 100) : 0;
+
+  let enCokDers = '', enCokSayisi = 0;
+  let enZayif = '', enZayifOran = 101;
+  for (const [ders, data] of Object.entries(a.dersler || {})) {
+    if (data.toplam > enCokSayisi) { enCokSayisi = data.toplam; enCokDers = ders; }
+    const dr = data.toplam > 0 ? (data.ogrenildi / data.toplam) * 100 : 0;
+    if (dr < enZayifOran) { enZayifOran = dr; enZayif = ders; }
+  }
+
+  return `Merhaba <strong>${isim}</strong>! ${sinavTuru ? `<strong>${sinavTuru}</strong> hazırlık sürecini` : 'Çalışma sürecini'} birlikte değerlendirelim 🎯<br><br>
+📚 Toplam <strong>${total}</strong> soru arşivledin. Bunların <strong>${ogrenildi}</strong>'ini (<strong>%${oran}</strong>) tamamladın, <strong>${devam}</strong> soru hâlâ devam ediyor.<br><br>
+${enCokDers ? `🔥 En çok çalıştığın alan: <strong>${enCokDers}</strong> (${enCokSayisi} soru)<br>` : ''}
+${enZayif && enZayif !== enCokDers ? `⚠️ Dikkat gerektiren alan: <strong>${enZayif}</strong> (tamamlanma oranı %${Math.round(enZayifOran)})<br><br>` : '<br>'}
+Sana nasıl yardımcı olabilirim? Zayıf konularını konuşalım mı, yoksa önümüzdeki hafta için bir çalışma planı hazırlayalım mı?`;
 }
 
-async function sendChatMessage() {
-  const input = document.getElementById('chatInput');
+// --- Mesaj gönder ---
+function chatbotKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatbotMessage(); }
+}
+
+async function sendChatbotMessage() {
+  const input = document.getElementById('chatbotInput');
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
-  const q = STATE.currentQuestion;
+  input.style.height = 'auto';
 
-  const container = document.getElementById('chatMessages');
-  container.innerHTML += `<div class="chat-bubble user">${msg}</div>`;
+  const msgs = document.getElementById('chatbotMessages');
+  msgs.innerHTML += `<div class="chatbot-bubble user">${escapeHtml(msg)}</div>`;
+
   const thinking = document.createElement('div');
-  thinking.className = 'chat-bubble ai thinking';
+  thinking.className = 'chatbot-bubble ai thinking';
   thinking.textContent = 'Düşünüyor...';
-  container.appendChild(thinking);
-  container.scrollTop = container.scrollHeight;
+  msgs.appendChild(thinking);
+  msgs.scrollTop = msgs.scrollHeight;
 
   STATE.chatHistory.push({ role: 'user', content: msg });
 
   try {
-    const reply = await geminiChat(msg, q.cozum, chatImageBase64, chatImageMime);
+    let reply;
+    if (chatbotMode === 'analiz') {
+      reply = await geminiAnalizChat(msg);
+    } else {
+      const q = STATE.currentQuestion;
+      reply = await geminiChat(msg, q?.cozum, chatbotImageBase64, chatbotImageMime);
+    }
     thinking.remove();
-    container.innerHTML += `<div class="chat-bubble ai">${reply}</div>`;
+    msgs.innerHTML += `<div class="chatbot-bubble ai">${reply}</div>`;
     STATE.chatHistory.push({ role: 'assistant', content: reply });
-  } catch (e) {
+  } catch (err) {
     thinking.remove();
-    container.innerHTML += `<div class="chat-bubble ai thinking">Hata: ${e.message}</div>`;
+    msgs.innerHTML += `<div class="chatbot-bubble ai thinking">Hata: ${err.message}</div>`;
   }
-  container.scrollTop = container.scrollHeight;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ════════════════════════════════════════════════════
@@ -2365,6 +2789,12 @@ function renderProfil() {
   document.getElementById('profileSinavTuru').value = STATE.profile.sinavTuru;
   document.getElementById('profileGeminiModel').value = STATE.geminiModel || '';
   document.getElementById('defaultModelHint').textContent = DEFAULT_GEMINI_MODEL;
+  // Chat pozisyon butonlarını güncelle
+  const side = getChatPosition();
+  const rBtn = document.getElementById('chatPosRightBtn');
+  const lBtn = document.getElementById('chatPosLeftBtn');
+  if (rBtn) rBtn.style.fontWeight = side === 'right' ? '700' : '';
+  if (lBtn) lBtn.style.fontWeight = side === 'left' ? '700' : '';
 }
 
 function saveGeminiModel() {
