@@ -350,10 +350,11 @@
       <!-- Step 1: API keys -->
       <div id="setup-step-keys">
         <div class="step-label">1. Kurulum — API Ayarları</div>
+        <div id="setup-keys-error" style="display:none; background: var(--red-light); border:1px solid #FCA5A5; color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px; font-size:12px; margin-bottom:14px; line-height:1.5;"></div>
         <div class="form-group">
           <label class="form-label">Google Client ID</label>
           <input type="text" class="form-input" id="setupClientId" placeholder="xxxx.apps.googleusercontent.com">
-          <div class="form-hint">Google Cloud Console → OAuth 2.0 İstemci Kimliği</div>
+          <div class="form-hint">Google Cloud Console → Kimlik Bilgileri → OAuth 2.0 İstemci Kimliği. "Yetkili yönlendirme URI'leri" alanına şu adresi <strong>birebir aynı</strong> şekilde eklemelisin: <code id="redirectUriHint" style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px; word-break:break-all;"></code> <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:10px;" onclick="copyRedirectUri()"><i class="ti ti-copy"></i> Kopyala</button></div>
         </div>
         <div class="form-group">
           <label class="form-label">Gemini API Key</label>
@@ -369,10 +370,14 @@
       <!-- Step 2: OAuth + Profile -->
       <div id="setup-step-auth" style="display:none;">
         <div class="step-label">2. Google Hesabı</div>
+        <div id="setup-auth-error" style="display:none; background: var(--red-light); border:1px solid #FCA5A5; color: var(--red); border-radius: var(--radius-sm); padding: 10px 12px; font-size:12px; margin-bottom:16px; line-height:1.5;"></div>
         <p style="font-size:13px; color: var(--text-muted); margin-bottom:16px;">Drive'a erişmek için Google hesabınızla giriş yapın.</p>
         <button class="btn google-btn btn-full btn-lg" onclick="startOAuth()">
           <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
           Google ile Giriş Yap
+        </button>
+        <button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="backToKeysStep()">
+          <i class="ti ti-arrow-left"></i> API Ayarlarına Geri Dön
         </button>
       </div>
 
@@ -598,6 +603,12 @@
             <button class="btn btn-secondary" onclick="logout()" style="margin-left:auto; color: var(--red);"><i class="ti ti-logout"></i> Çıkış Yap</button>
           </div>
         </div>
+
+        <div class="card profile-card" style="margin-top:16px;">
+          <div class="form-label" style="margin-bottom:8px;">API Ayarları</div>
+          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Client ID veya Gemini API Key'i yanlış girdiysen ya da değiştirmek istersen buradan sıfırlayabilirsin. Bu işlem seni tekrar kurulum ekranına yönlendirir, Drive'daki sorular ve arşivin etkilenmez.</p>
+          <button class="btn btn-secondary" onclick="resetApiKeys()" style="color: var(--amber);"><i class="ti ti-key"></i> API Ayarlarını Sıfırla</button>
+        </div>
       </div>
 
     </main>
@@ -709,6 +720,15 @@ async function generatePKCE() {
 }
 
 async function startOAuth() {
+  if (location.protocol === 'file:') {
+    showSetupError('setup-auth-error', 'Bu dosya doğrudan çift tıklanarak (file://) açılmış. Google girişi bu şekilde çalışmaz. Dosyayı bir web sunucusundan (ör. GitHub Pages, Netlify) veya "localhost" üzerinden açman gerekiyor — Client ID\'ye eklediğin yönlendirme adresiyle aynı adresten erişmelisin.');
+    return;
+  }
+  if (!STATE.clientId) {
+    showSetupError('setup-auth-error', 'Client ID bulunamadı, lütfen önceki adıma dönüp tekrar gir.');
+    return;
+  }
+  showSetupError('setup-auth-error', '');
   const { verifier, challenge } = await generatePKCE();
   sessionStorage.setItem('pkce_verifier', verifier);
   const params = new URLSearchParams({
@@ -726,11 +746,30 @@ async function startOAuth() {
 
 async function handleOAuthCallback() {
   const params = new URLSearchParams(location.search);
+
+  // Google bir hata ile geri dönmüş olabilir (örn. redirect_uri_mismatch, access_denied)
+  const oauthError = params.get('error');
+  if (oauthError) {
+    history.replaceState({}, '', location.pathname);
+    const errMap = {
+      redirect_uri_mismatch: 'Yönlendirme adresi uyuşmuyor. Google Cloud Console\'daki Client ID ayarlarında "Yetkili yönlendirme URI\'leri" alanına aşağıdaki adresi birebir aynı şekilde eklediğinden emin ol.',
+      access_denied: 'Giriş izni verilmedi. Tekrar deneyip Google hesabı seçim ekranında izinleri onaylaman gerekiyor.',
+      invalid_client: 'Client ID geçersiz görünüyor. Bir önceki adıma dönüp doğru değeri tekrar girmeni öneririm.',
+    };
+    showSetupError('setup-auth-error',
+      (errMap[oauthError] || ('Google giriş hatası: ' + oauthError)) +
+      '<br><br>Yönlendirme adresin: <code style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px; word-break:break-all;">' + REDIRECT_URI + '</code>');
+    return false;
+  }
+
   const code = params.get('code');
   if (!code) return false;
   history.replaceState({}, '', location.pathname);
   const verifier = sessionStorage.getItem('pkce_verifier');
-  if (!verifier) { showToast('PKCE doğrulaması başarısız.', 'error'); return false; }
+  if (!verifier) {
+    showSetupError('setup-auth-error', 'Oturum doğrulaması (PKCE) bulunamadı. Bu genelde sayfanın farklı bir sekmede yeniden açılmasından kaynaklanır — lütfen "Google ile Giriş Yap" butonuna tekrar bas.');
+    return false;
+  }
   try {
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -752,7 +791,7 @@ async function handleOAuthCallback() {
     sessionStorage.removeItem('pkce_verifier');
     return true;
   } catch (e) {
-    showToast('Giriş başarısız: ' + e.message, 'error');
+    showSetupError('setup-auth-error', 'Token alınamadı: ' + e.message + '. Client ID\'nin doğru ve "Yetkili yönlendirme URI\'leri" listesinde bu adresin olduğundan emin ol: <code style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px; word-break:break-all;">' + REDIRECT_URI + '</code>');
     return false;
   }
 }
@@ -800,6 +839,16 @@ function logout() {
   localStorage.removeItem('sa_token_expiry');
   STATE.accessToken = '';
   STATE.refreshToken = '';
+  location.reload();
+}
+
+function resetApiKeys() {
+  if (!confirm('Client ID ve Gemini API Key sıfırlanacak, tekrar giriş yapman gerekecek. Drive\'daki sorular ve arşivin silinmeyecek. Devam edilsin mi?')) return;
+  localStorage.removeItem('sa_client_id');
+  localStorage.removeItem('sa_gemini_key');
+  localStorage.removeItem('sa_access_token');
+  localStorage.removeItem('sa_refresh_token');
+  localStorage.removeItem('sa_token_expiry');
   location.reload();
 }
 
@@ -960,16 +1009,56 @@ Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, başta
 // ════════════════════════════════════════════════════
 // ── SETUP
 // ════════════════════════════════════════════════════
+function showSetupError(stepId, msg) {
+  const el = document.getElementById(stepId);
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = msg;
+}
+
 function saveSetup() {
+  showSetupError('setup-keys-error', '');
   const cid = document.getElementById('setupClientId').value.trim();
   const gkey = document.getElementById('setupGeminiKey').value.trim();
-  if (!cid || !gkey) { showToast('Lütfen tüm alanları doldurun.', 'error'); return; }
+
+  if (!cid || !gkey) {
+    showSetupError('setup-keys-error', 'Lütfen her iki alanı da doldurun.');
+    return;
+  }
+  // Basit format doğrulaması — yaygın yanlış girişleri burada yakala
+  if (!/\.apps\.googleusercontent\.com$/.test(cid)) {
+    showSetupError('setup-keys-error', 'Client ID ".apps.googleusercontent.com" ile bitmeli. Google Cloud Console → Kimlik Bilgileri sayfasından "OAuth 2.0 İstemci Kimlikleri" altındaki değeri kopyaladığından emin ol.');
+    return;
+  }
+  if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(gkey)) {
+    showSetupError('setup-keys-error', 'Gemini API Key "AIza" ile başlamalı. Google AI Studio → Get API Key sayfasından kontrol et.');
+    return;
+  }
+
   localStorage.setItem('sa_client_id', cid);
   localStorage.setItem('sa_gemini_key', gkey);
   STATE.clientId = cid;
   STATE.geminiKey = gkey;
+  showSetupError('setup-auth-error', '');
   document.getElementById('setup-step-keys').style.display = 'none';
   document.getElementById('setup-step-auth').style.display = 'block';
+}
+
+function backToKeysStep() {
+  // Adım 2'den adım 1'e dön; mevcut değerleri input'lara geri doldur ki kullanıcı sıfırdan yazmasın
+  document.getElementById('setupClientId').value = STATE.clientId || '';
+  document.getElementById('setupGeminiKey').value = STATE.geminiKey || '';
+  showSetupError('setup-auth-error', '');
+  document.getElementById('setup-step-auth').style.display = 'none';
+  document.getElementById('setup-step-keys').style.display = 'block';
+}
+
+function copyRedirectUri() {
+  navigator.clipboard.writeText(REDIRECT_URI).then(() => {
+    showToast('Yönlendirme adresi kopyalandı.', 'success');
+  }).catch(() => {
+    showToast('Kopyalanamadı, adresi elle seçip kopyalayabilirsin.', 'error');
+  });
 }
 
 async function createProfile() {
@@ -1748,6 +1837,10 @@ async function saveProfile() {
 async function init() {
   showLoader(true);
 
+  // Redirect URI ipucunu setup ekranına yaz (kullanıcı Google Console'a eklerken kullanacak)
+  const hintEl = document.getElementById('redirectUriHint');
+  if (hintEl) hintEl.textContent = REDIRECT_URI;
+
   // Load config
   STATE.clientId = localStorage.getItem('sa_client_id') || '';
   STATE.geminiKey = localStorage.getItem('sa_gemini_key') || '';
@@ -1760,18 +1853,23 @@ async function init() {
   if (!STATE.clientId || !STATE.geminiKey) {
     showLoader(false);
     showScreen('screen-setup');
+    document.getElementById('setupClientId').value = STATE.clientId;
+    document.getElementById('setupGeminiKey').value = STATE.geminiKey;
     document.getElementById('setup-step-keys').style.display = 'block';
+    document.getElementById('setup-step-auth').style.display = 'none';
+    document.getElementById('setup-step-profile').style.display = 'none';
     return;
   }
 
-  // Handle OAuth callback
-  if (location.search.includes('code=')) {
+  // Handle OAuth callback (also handles error= from Google)
+  if (location.search.includes('code=') || location.search.includes('error=')) {
     const ok = await handleOAuthCallback();
     if (!ok) {
       showLoader(false);
       showScreen('screen-setup');
       document.getElementById('setup-step-keys').style.display = 'none';
       document.getElementById('setup-step-auth').style.display = 'block';
+      document.getElementById('setup-step-profile').style.display = 'none';
       return;
     }
   }
