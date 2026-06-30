@@ -638,7 +638,7 @@
 // ════════════════════════════════════════════════════
 const OAUTH_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const REDIRECT_URI = location.origin + location.pathname;
 
 // ════════════════════════════════════════════════════
@@ -986,7 +986,11 @@ adimlar: her adım ayrı string, LaTeX kullanma, düz metin.`;
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
+    throw new Error(`Gemini ${res.status}${detail}`);
+  }
   const data = await res.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -1014,7 +1018,11 @@ Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, başta
   const res = await fetch(`${GEMINI_API}?key=${STATE.geminiKey}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
+    throw new Error(`Gemini ${res.status}${detail}`);
+  }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
 }
