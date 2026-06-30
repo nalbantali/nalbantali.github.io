@@ -1030,8 +1030,10 @@ function saveSetup() {
     showSetupError('setup-keys-error', 'Client ID ".apps.googleusercontent.com" ile bitmeli. Google Cloud Console → Kimlik Bilgileri sayfasından "OAuth 2.0 İstemci Kimlikleri" altındaki değeri kopyaladığından emin ol.');
     return;
   }
-  if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(gkey)) {
-    showSetupError('setup-keys-error', 'Gemini API Key "AIza" ile başlamalı. Google AI Studio → Get API Key sayfasından kontrol et.');
+  // Not: Gemini key formatı zamanla değişebilir, bu yüzden sadece çok temel bir uzunluk
+  // kontrolü yapıyoruz; gerçek doğrulama ilk API çağrısında ortaya çıkar.
+  if (gkey.length < 15 || /\s/.test(gkey)) {
+    showSetupError('setup-keys-error', 'Gemini API Key çok kısa görünüyor veya içinde boşluk var. AI Studio sayfasından anahtarı tekrar kopyalayıp yapıştırmayı dene (anahtarın başında/sonunda yanlışlıkla boşluk kalmadığından emin ol).');
     return;
   }
 
