@@ -614,6 +614,16 @@
           <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Client ID veya Gemini API Key'i yanlış girdiysen ya da değiştirmek istersen buradan sıfırlayabilirsin. Bu işlem seni tekrar kurulum ekranına yönlendirir, Drive'daki sorular ve arşivin etkilenmez.</p>
           <button class="btn btn-secondary" onclick="resetApiKeys()" style="color: var(--amber);"><i class="ti ti-key"></i> API Ayarlarını Sıfırla</button>
         </div>
+
+        <div class="card profile-card" style="margin-top:16px;">
+          <div class="form-label" style="margin-bottom:8px;">Gemini Modeli</div>
+          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Google zaman zaman yeni Gemini modelleri çıkarır veya eski modelleri kaldırır. Bir model artık çalışmıyorsa (örn. "model bulunamadı" hatası alıyorsan), kodu değiştirmene gerek yok — güncel model adını buraya yazman yeterli.</p>
+          <div class="form-group">
+            <input type="text" class="form-input" id="profileGeminiModel" placeholder="gemini-2.5-flash">
+            <div class="form-hint">Geçerli model adlarını <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener" style="color:var(--primary);">Google'ın model listesinden</a> kontrol edebilirsin. Boş bırakırsan varsayılan (<code id="defaultModelHint" style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px;"></code>) kullanılır.</div>
+          </div>
+          <button class="btn btn-secondary" onclick="saveGeminiModel()"><i class="ti ti-check"></i> Model Ayarını Kaydet</button>
+        </div>
       </div>
 
     </main>
@@ -638,8 +648,13 @@
 // ════════════════════════════════════════════════════
 const OAUTH_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'; // Google modeli değiştirirse/kaldırırsa burayı güncelle — kullanıcılar Ayarlar'dan da değiştirebilir
 const REDIRECT_URI = location.origin + location.pathname;
+
+function geminiApiUrl() {
+  const model = STATE.geminiModel || DEFAULT_GEMINI_MODEL;
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 // ════════════════════════════════════════════════════
 // ── STATE
@@ -647,6 +662,7 @@ const REDIRECT_URI = location.origin + location.pathname;
 let STATE = {
   clientId: '',
   geminiKey: '',
+  geminiModel: '',
   accessToken: '',
   refreshToken: '',
   tokenExpiry: 0,
@@ -952,8 +968,41 @@ async function driveReadFile(fileId) {
   return res.json();
 }
 
-function driveImageUrl(fileId) {
-  return `https://drive.google.com/uc?export=view&id=${fileId}`;
+// Drive resimleri private olduğu için <img src> ile direkt gösterilemiyor.
+// Token ile indirip blob URL'e çeviriyoruz ve cache'liyoruz.
+const imageBlobCache = {};
+
+async function driveGetImageBlobUrl(fileId) {
+  if (!fileId) return '';
+  if (imageBlobCache[fileId]) return imageBlobCache[fileId];
+  await ensureToken();
+  const res = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${STATE.accessToken}` }
+  });
+  if (!res.ok) throw new Error('Görsel indirilemedi');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  imageBlobCache[fileId] = url;
+  return url;
+}
+
+// Bir <img> elemanını, henüz çözülmemiş bir Drive fileId'sinden doldurur.
+// Kullanım: <img data-drive-img="FILE_ID" ...> şeklinde işaretlenmiş elemanları tarar ve doldurur.
+async function hydrateDriveImages(root = document) {
+  const imgs = root.querySelectorAll('img[data-drive-img]');
+  for (const img of imgs) {
+    const fileId = img.getAttribute('data-drive-img');
+    if (!fileId) continue;
+    try {
+      const url = await driveGetImageBlobUrl(fileId);
+      img.src = url;
+    } catch (e) {
+      img.replaceWith(Object.assign(document.createElement('i'), {
+        className: 'ti ti-photo',
+        style: 'color:var(--text-light);font-size:24px;margin:12px auto;display:block;'
+      }));
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -981,7 +1030,7 @@ adimlar: her adım ayrı string, LaTeX kullanma, düz metin.`;
     generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
   };
 
-  const res = await fetch(`${GEMINI_API}?key=${STATE.geminiKey}`, {
+  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -1015,7 +1064,7 @@ Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, başta
     contents: [{ parts }],
     generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
   };
-  const res = await fetch(`${GEMINI_API}?key=${STATE.geminiKey}`, {
+  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
   if (!res.ok) {
@@ -1289,7 +1338,7 @@ function renderRemindList() {
   container.innerHTML = remind.map(q => `
     <div class="remind-card" onclick="openQuestion('${q.id}')">
       <div class="remind-thumb">
-        ${q.resimDriveId ? `<img src="${driveImageUrl(q.resimDriveId)}" alt="" onerror="this.parentElement.innerHTML='<i class=\\'ti ti-photo\\' style=\\'color:var(--text-light);font-size:24px;margin:12px auto;display:block;\\'></i>'">` : '<i class="ti ti-photo" style="color:var(--text-light);font-size:24px;margin:12px auto;display:block;"></i>'}
+        ${q.resimDriveId ? `<img data-drive-img="${q.resimDriveId}" alt="">` : '<i class="ti ti-photo" style="color:var(--text-light);font-size:24px;margin:12px auto;display:block;"></i>'}
       </div>
       <div class="remind-info">
         <div class="remind-topic">${q.konu}</div>
@@ -1298,6 +1347,7 @@ function renderRemindList() {
       <i class="ti ti-chevron-right" style="color: var(--text-light);"></i>
     </div>
   `).join('');
+  hydrateDriveImages(container);
 }
 
 // ════════════════════════════════════════════════════
@@ -1507,7 +1557,7 @@ function renderQuestionGrid(questions) {
     <div class="question-card" onclick="openQuestion('${q.id}')">
       <div class="question-thumb">
         ${q.resimDriveId
-          ? `<img src="${driveImageUrl(q.resimDriveId)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-img\\'><i class=\\'ti ti-photo\\'></i></div>'">`
+          ? `<img data-drive-img="${q.resimDriveId}" alt="" loading="lazy">`
           : '<div class="no-img"><i class="ti ti-photo"></i></div>'}
       </div>
       <div class="question-body">
@@ -1524,6 +1574,7 @@ function renderQuestionGrid(questions) {
       </div>
     </div>
   `).join('');
+  hydrateDriveImages(grid);
 }
 
 // ════════════════════════════════════════════════════
@@ -1563,10 +1614,9 @@ function renderDetail(q) {
   `;
 
   // Main content
-  const imgSrc = q.resimDriveId ? driveImageUrl(q.resimDriveId) : '';
   document.getElementById('detayContent').innerHTML = `
     <div>
-      ${imgSrc ? `<img src="${imgSrc}" alt="Soru" onclick="openLightbox('${imgSrc}')" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);cursor:zoom-in;">` : '<div style="padding:40px;text-align:center;color:var(--text-light);border:1px dashed var(--border);border-radius:var(--radius);"><i class="ti ti-photo" style="font-size:40px;"></i><br>Görsel bulunamadı</div>'}
+      ${q.resimDriveId ? `<img id="detayMainImg" data-drive-img="${q.resimDriveId}" alt="Soru" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);cursor:zoom-in;">` : '<div style="padding:40px;text-align:center;color:var(--text-light);border:1px dashed var(--border);border-radius:var(--radius);"><i class="ti ti-photo" style="font-size:40px;"></i><br>Görsel bulunamadı</div>'}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
         <span class="badge badge-blue"><i class="ti ti-book"></i> ${q.ders}</span>
         <span class="badge badge-gray">${q.konu}</span>
@@ -1656,6 +1706,12 @@ function renderDetail(q) {
     </div>
     <button class="btn btn-secondary btn-sm" onclick="incrementTekrar()"><i class="ti ti-refresh"></i> Tekrar Ettim</button>
   `;
+
+  // Drive görselini yükle (token ile) ve lightbox'a bağla
+  hydrateDriveImages(document.getElementById('detayContent')).then(() => {
+    const mainImg = document.getElementById('detayMainImg');
+    if (mainImg) mainImg.onclick = () => openLightbox(mainImg.src);
+  });
 }
 
 async function toggleLearned() {
@@ -1700,9 +1756,13 @@ function openChat() {
   document.getElementById('chatOverlay').style.display = 'block';
   document.getElementById('chatPanel').classList.add('open');
 
-  // Preload image for chat
+  // Preload image for chat (token ile indir)
   if (q.resimDriveId) {
-    fetch(driveImageUrl(q.resimDriveId))
+    ensureToken().then(() =>
+      fetch(`${DRIVE_API}/files/${q.resimDriveId}?alt=media`, {
+        headers: { Authorization: `Bearer ${STATE.accessToken}` }
+      })
+    )
       .then(r => r.blob())
       .then(blob => {
         const reader = new FileReader();
@@ -1854,6 +1914,16 @@ function renderProfil() {
   if (!STATE.profile) return;
   document.getElementById('profileName').value = STATE.profile.isim;
   document.getElementById('profileSinavTuru').value = STATE.profile.sinavTuru;
+  document.getElementById('profileGeminiModel').value = STATE.geminiModel || '';
+  document.getElementById('defaultModelHint').textContent = DEFAULT_GEMINI_MODEL;
+}
+
+function saveGeminiModel() {
+  const model = document.getElementById('profileGeminiModel').value.trim();
+  STATE.geminiModel = model;
+  if (model) localStorage.setItem('sa_gemini_model', model);
+  else localStorage.removeItem('sa_gemini_model');
+  showToast(model ? `Model "${model}" olarak ayarlandı.` : `Varsayılan model (${DEFAULT_GEMINI_MODEL}) kullanılacak.`, 'success');
 }
 
 async function saveProfile() {
@@ -1886,6 +1956,7 @@ async function init() {
   STATE.clientId = localStorage.getItem('sa_client_id') || '';
   STATE.clientSecret = localStorage.getItem('sa_client_secret') || '';
   STATE.geminiKey = localStorage.getItem('sa_gemini_key') || '';
+  STATE.geminiModel = localStorage.getItem('sa_gemini_model') || '';
   STATE.rootFolderId = localStorage.getItem('sa_root_folder') || '';
   STATE.sorularFolderId = localStorage.getItem('sa_sorular_folder') || '';
   STATE.profileFileId = localStorage.getItem('sa_profile_file_id') || '';
