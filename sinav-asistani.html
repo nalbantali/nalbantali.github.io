@@ -206,11 +206,21 @@
   .preview-img { max-width: 100%; max-height: 200px; border-radius: var(--radius); margin-top: 16px; border: 1px solid var(--border); }
 
   /* ── ARCHIVE SCREEN ────────────────────────────────── */
-  .archive-layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
+  .archive-layout { display: grid; grid-template-columns: 270px 1fr; gap: 20px; }
   @media (max-width: 768px) {
-    .archive-layout { grid-template-columns: 1fr; }
-    .folder-tree { position: static; display: flex; gap: 6px; flex-wrap: wrap; padding: 12px; }
-    .tree-item { padding: 5px 10px; font-size: 12px; border-radius: 20px; border: 1px solid var(--border); border-left: none !important; background: var(--surface); }
+    .archive-layout { grid-template-columns: 1fr; gap: 0; }
+    /* Mobil: tree accordion olarak kapanıp açılır */
+    .folder-tree { position: static; border-radius: 0; border-left: none; border-right: none; border-top: none; padding: 0; }
+    .tree-mobile-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
+      color: var(--text); background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .tree-mobile-toggle i { font-size: 16px; color: var(--text-muted); transition: transform .2s; }
+    .tree-mobile-toggle.open i.toggle-arrow { transform: rotate(180deg); }
+    .tree-mobile-body { display: none; padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .tree-mobile-body.open { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tree-item { padding: 5px 11px; font-size: 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); display: inline-flex; }
     .tree-item.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .tree-item.active .tree-count { background: rgba(255,255,255,0.2); border-color: transparent; color: #fff; }
     .tree-children { display: contents; padding-left: 0; }
@@ -219,6 +229,10 @@
     .detail-actions .counters { justify-content: center; }
     .metrics-grid { grid-template-columns: 1fr 1fr; }
     .summary-cards { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 769px) {
+    .tree-mobile-toggle { display: none; }
+    .tree-mobile-body { display: contents !important; }
   }
   .folder-tree { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; height: fit-content; position: sticky; top: 20px; }
   .tree-item { padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); transition: all .15s; }
@@ -280,165 +294,103 @@
   .counter-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
   .btn-learned.active { background: var(--green); color: #fff; }
 
-  /* ── FLOATING CHATBOT ────────────────────────────── */
-  /* FAB (Floating Action Button) */
+  /* ── FLOATING CHATBOT ──────────────────────────── */
+  /* FAB */
   .chat-fab {
-    position: fixed;
-    bottom: 28px;
-    right: 28px;
-    z-index: 210;
-    display: none; /* JS ile gösterilir */
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    position: fixed; bottom: 28px; right: 24px; z-index: 210;
+    display: none; flex-direction: row-reverse; align-items: center; gap: 10px;
   }
-  .chat-fab.pos-left { align-items: flex-start; right: auto; left: 28px; }
+  .chat-fab.pos-left { right: auto; left: calc(var(--sidebar-w, 260px) + 16px); flex-direction: row; }
   .chat-fab-btn {
-    width: 56px; height: 56px;
-    background: var(--primary);
-    border-radius: 50%;
+    width: 52px; height: 52px; background: var(--primary); border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 16px rgba(37,99,235,0.35);
-    cursor: pointer;
-    border: none;
-    transition: transform 0.18s, box-shadow 0.18s;
-    position: relative;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.35); cursor: pointer; border: none;
+    transition: transform .18s, box-shadow .18s; flex-shrink: 0;
   }
   .chat-fab-btn:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(37,99,235,0.45); }
-  .chat-fab-btn i { font-size: 26px; color: #fff; }
-  .chat-fab-switch {
-    width: 28px; height: 28px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    position: absolute;
-    top: -6px; left: -6px;
-    box-shadow: var(--shadow-sm);
-    transition: background 0.12s;
-  }
-  .chat-fab-switch:hover { background: var(--bg); }
-  .chat-fab-switch i { font-size: 13px; color: var(--text-muted); }
+  .chat-fab-btn i { font-size: 24px; color: #fff; }
   .chat-fab-label {
-    font-size: 11px; font-weight: 600;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 3px 10px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    box-shadow: var(--shadow-sm);
+    font-size: 12px; font-weight: 600; color: var(--primary);
+    background: var(--primary-light); border: 1px solid #BFDBFE;
+    border-radius: 20px; padding: 4px 12px; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.10);
   }
-
   /* Chatbot panel */
   .chatbot-panel {
-    position: fixed;
-    bottom: 100px;
-    right: 28px;
-    width: 420px;
-    max-width: calc(100vw - 32px);
-    height: 560px;
-    max-height: calc(100vh - 140px);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-    z-index: 209;
-    display: flex; flex-direction: column;
-    overflow: hidden;
+    position: fixed; bottom: 92px; right: 24px;
+    width: 430px; max-width: calc(100vw - 32px);
+    height: 570px; max-height: calc(100vh - 130px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    z-index: 209; display: flex; flex-direction: column; overflow: hidden;
     opacity: 0; pointer-events: none;
-    transform: translateY(16px) scale(0.97);
-    transition: opacity 0.2s, transform 0.2s;
+    transform: translateY(14px) scale(0.97);
+    transition: opacity .2s, transform .2s;
     transform-origin: bottom right;
   }
   .chatbot-panel.pos-left {
-    right: auto; left: 28px;
+    right: auto; left: calc(var(--sidebar-w, 260px) + 16px);
     transform-origin: bottom left;
   }
-  .chatbot-panel.open {
-    opacity: 1; pointer-events: all;
-    transform: translateY(0) scale(1);
-  }
+  .chatbot-panel.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
   .chatbot-header {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface);
-    flex-shrink: 0;
+    padding: 13px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
   }
   .chatbot-header-icon {
-    width: 34px; height: 34px;
-    background: var(--primary-light);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    width: 34px; height: 34px; background: var(--primary-light); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .chatbot-header-icon i { font-size: 18px; color: var(--primary); }
+  .chatbot-header-icon i { font-size: 17px; color: var(--primary); }
   .chatbot-header-info { flex: 1; min-width: 0; }
   .chatbot-header-info strong { font-size: 13px; font-weight: 600; display: block; }
-  .chatbot-header-info span { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .chatbot-header-actions { display: flex; gap: 4px; }
-  .chatbot-header-actions button {
-    width: 30px; height: 30px;
-    border-radius: var(--radius);
-    border: none; background: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.12s, color 0.12s;
-    font-size: 15px;
+  .chatbot-header-info span { font-size: 11px; color: var(--text-muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chatbot-header-btns { display: flex; gap: 2px; }
+  .chatbot-header-btns button {
+    width: 30px; height: 30px; border-radius: var(--radius-sm); border: none; background: none;
+    color: var(--text-muted); cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; transition: background .12s;
   }
-  .chatbot-header-actions button:hover { background: var(--bg); color: var(--text); }
+  .chatbot-header-btns button:hover { background: var(--bg); color: var(--text); }
   .chatbot-context-bar {
-    padding: 10px 16px;
-    background: var(--primary-light);
-    border-bottom: 1px solid #BFDBFE;
-    font-size: 12px; color: #1E40AF;
-    line-height: 1.5;
-    flex-shrink: 0;
+    padding: 9px 16px; background: var(--primary-light); border-bottom: 1px solid #BFDBFE;
+    font-size: 12px; color: #1E40AF; line-height: 1.5; flex-shrink: 0;
   }
   .chatbot-messages {
-    flex: 1; overflow-y: auto;
-    padding: 16px;
+    flex: 1; overflow-y: auto; padding: 14px 16px;
     display: flex; flex-direction: column; gap: 10px;
   }
-  .chatbot-bubble { max-width: 85%; padding: 10px 13px; font-size: 13px; line-height: 1.6; border-radius: 14px; word-break: break-word; }
+  .chatbot-bubble {
+    max-width: 86%; padding: 9px 13px; font-size: 13px; line-height: 1.6;
+    border-radius: 14px; word-break: break-word;
+  }
   .chatbot-bubble.user { background: var(--primary); color: #fff; align-self: flex-end; border-radius: 14px 14px 3px 14px; }
   .chatbot-bubble.ai { background: var(--bg); border: 1px solid var(--border); align-self: flex-start; border-radius: 14px 14px 14px 3px; }
   .chatbot-bubble.thinking { color: var(--text-muted); font-style: italic; }
   .chatbot-input-row {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display: flex; gap: 8px; align-items: flex-end;
-    flex-shrink: 0;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
   .chatbot-input {
-    flex: 1; padding: 9px 13px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    font-size: 13px; font-family: inherit;
-    outline: none; resize: none;
-    max-height: 100px; min-height: 38px;
-    background: var(--bg);
-    transition: border-color 0.15s;
-    line-height: 1.5;
+    flex: 1; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 14px; font-size: 13px; font-family: inherit; outline: none;
+    resize: none; max-height: 90px; min-height: 38px; background: var(--bg);
+    transition: border-color .15s; line-height: 1.5;
   }
   .chatbot-input:focus { border-color: var(--primary); }
   .chatbot-send {
-    width: 36px; height: 36px; flex-shrink: 0;
-    background: var(--primary); border: none; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background 0.12s;
+    width: 36px; height: 36px; flex-shrink: 0; background: var(--primary);
+    border: none; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: background .12s;
   }
   .chatbot-send:hover { background: #1D4ED8; }
   .chatbot-send i { font-size: 16px; color: #fff; }
-  .chatbot-divider { text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0; }
-
   @media (max-width: 768px) {
-    .chat-fab { bottom: calc(var(--mobile-nav-h, 64px) + 16px); }
-    .chatbot-panel { bottom: calc(var(--mobile-nav-h, 64px) + 80px); width: calc(100vw - 32px); height: 50vh; }
+    .chat-fab { bottom: calc(64px + 14px); right: 14px; }
+    .chat-fab.pos-left { left: 14px; }
+    .chatbot-panel { bottom: calc(64px + 72px); right: 14px; width: calc(100vw - 28px); height: 52vh; }
+    .chatbot-panel.pos-left { left: 14px; right: auto; }
   }
 
   /* ── LIGHTBOX ────────────────────────────────── */
@@ -551,11 +503,8 @@
 <!-- FLOATING CHATBOT FAB -->
 <div class="chat-fab" id="chatFab">
   <div class="chat-fab-label" id="chatFabLabel">Soru Sor</div>
-  <button class="chat-fab-btn" id="chatFabBtn" onclick="toggleChatbot()">
+  <button class="chat-fab-btn" id="chatFabBtn" onclick="toggleChatbot()" aria-label="Asistan">
     <i class="ti ti-message-circle"></i>
-    <button class="chat-fab-switch" onclick="switchChatSide(event)" title="Sol/Sağ değiştir">
-      <i class="ti ti-arrows-left-right"></i>
-    </button>
   </button>
 </div>
 
@@ -566,28 +515,22 @@
       <i class="ti ti-message-circle"></i>
     </div>
     <div class="chatbot-header-info">
-      <strong id="chatbotHeaderTitle">Soru Asistanı</strong>
-      <span id="chatbotHeaderSub">Bu soru hakkında sorularını sor</span>
+      <strong id="chatbotHeaderTitle">Asistan</strong>
+      <span id="chatbotHeaderSub"></span>
     </div>
-    <div class="chatbot-header-actions">
-      <button onclick="switchChatSide(event)" title="Sol/Sağ taraf">
-        <i class="ti ti-arrows-left-right"></i>
-      </button>
-      <button onclick="clearChatbot()" title="Sohbeti temizle">
-        <i class="ti ti-trash"></i>
-      </button>
-      <button onclick="toggleChatbot()" title="Kapat">
-        <i class="ti ti-x"></i>
-      </button>
+    <div class="chatbot-header-btns">
+      <button onclick="switchChatSide()" title="Sol/Sağ değiştir"><i class="ti ti-arrows-left-right"></i></button>
+      <button onclick="clearChatbot()" title="Sohbeti temizle"><i class="ti ti-trash"></i></button>
+      <button onclick="closeChatbot()" title="Kapat"><i class="ti ti-x"></i></button>
     </div>
   </div>
-  <div class="chatbot-context-bar" id="chatbotContextBar"></div>
+  <div class="chatbot-context-bar" id="chatbotContextBar" style="display:none;"></div>
   <div class="chatbot-messages" id="chatbotMessages"></div>
   <div class="chatbot-input-row">
     <textarea class="chatbot-input" id="chatbotInput"
-      placeholder="Aklında takılan bir şey mi var?" rows="1"
+      placeholder="Yaz..." rows="1"
       onkeydown="chatbotKeydown(event)"
-      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
     <button class="chatbot-send" onclick="sendChatbotMessage()">
       <i class="ti ti-send"></i>
     </button>
@@ -865,10 +808,16 @@
         </div>
         <div class="archive-layout">
           <div class="folder-tree" id="folderTree">
-            <div class="tree-item active" onclick="filterArchive(null, null)" id="treeAll">
-              <i class="ti ti-folders"></i> Tümü <span class="tree-count" id="treeAllCount">0</span>
+            <div class="tree-mobile-toggle" id="treeMobileToggle" onclick="toggleMobileTree()">
+              <span><i class="ti ti-folders" style="margin-right:6px;"></i><span id="treeMobileLabel">Dersler & Konular</span></span>
+              <i class="ti ti-chevron-down toggle-arrow"></i>
             </div>
-            <div id="treeDersList"></div>
+            <div class="tree-mobile-body" id="treeMobileBody">
+              <div class="tree-item active" onclick="filterArchive(null, null)" id="treeAll">
+                <i class="ti ti-folders"></i> Tümü <span class="tree-count" id="treeAllCount">0</span>
+              </div>
+              <div id="treeDersList"></div>
+            </div>
           </div>
           <div>
             <div class="archive-stats" id="archiveStats">0 soru — 0 öğrenildi — 0 devam ediyor</div>
@@ -890,14 +839,9 @@
 
       <!-- ANALİZ -->
       <div id="page-analiz" class="page" style="display:none;">
-        <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-          <div>
-            <div class="page-title">Analiz</div>
-            <div class="page-sub">Çalışma istatistiklerin</div>
-          </div>
-          <button class="btn btn-primary" onclick="openAnalizChat()" style="gap:8px;">
-            <i class="ti ti-brain"></i> Birlikte Analiz Edelim
-          </button>
+        <div class="page-header">
+          <div class="page-title">Analiz</div>
+          <div class="page-sub">Çalışma istatistiklerin</div>
         </div>
         <div class="summary-cards" id="analysisSummary" style="margin-bottom:20px;"></div>
         <div class="analytics-grid">
@@ -959,8 +903,18 @@
         </div>
 
         <div class="card profile-card" style="margin-top:16px;">
+          <div class="form-label" style="margin-bottom:8px;">Gemini Modeli</div>
+          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Google zaman zaman yeni Gemini modelleri çıkarır veya eski modelleri kaldırır. Bir model artık çalışmıyorsa (örn. "model bulunamadı" hatası alıyorsan), kodu değiştirmene gerek yok — güncel model adını buraya yazman yeterli.</p>
+          <div class="form-group">
+            <input type="text" class="form-input" id="profileGeminiModel" placeholder="gemini-2.5-flash">
+            <div class="form-hint">Geçerli model adlarını <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener" style="color:var(--primary);">Google'ın model listesinden</a> kontrol edebilirsin. Boş bırakırsan varsayılan (<code id="defaultModelHint" style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px;"></code>) kullanılır.</div>
+          </div>
+          <button class="btn btn-secondary" onclick="saveGeminiModel()"><i class="ti ti-check"></i> Model Ayarını Kaydet</button>
+        </div>
+
+        <div class="card profile-card" style="margin-top:16px;">
           <div class="form-label" style="margin-bottom:8px;">Yapay Zeka Asistanı Konumu</div>
-          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Ekranın sağ alt veya sol alt köşesini tercih edebilirsin. Buton üzerindeki ↔ işaretiyle de anlık olarak değiştirebilirsin.</p>
+          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Sohbet butonunun ekranda hangi köşede durmasını istediğini seç. Panel içinden ↔ butonu ile de anlık değiştirebilirsin.</p>
           <div style="display:flex; gap:10px;">
             <button class="btn btn-secondary" id="chatPosRightBtn" onclick="setChatPosition('right')">
               <i class="ti ti-layout-sidebar-right"></i> Sağ Köşe
@@ -969,13 +923,6 @@
               <i class="ti ti-layout-sidebar-left"></i> Sol Köşe
             </button>
           </div>
-        </div>
-          <p style="font-size:12px; color: var(--text-muted); margin-bottom:14px; line-height:1.6;">Google zaman zaman yeni Gemini modelleri çıkarır veya eski modelleri kaldırır. Bir model artık çalışmıyorsa (örn. "model bulunamadı" hatası alıyorsan), kodu değiştirmene gerek yok — güncel model adını buraya yazman yeterli.</p>
-          <div class="form-group">
-            <input type="text" class="form-input" id="profileGeminiModel" placeholder="gemini-2.5-flash">
-            <div class="form-hint">Geçerli model adlarını <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener" style="color:var(--primary);">Google'ın model listesinden</a> kontrol edebilirsin. Boş bırakırsan varsayılan (<code id="defaultModelHint" style="font-size:10.5px; background:var(--bg); padding:1px 4px; border-radius:4px;"></code>) kullanılır.</div>
-          </div>
-          <button class="btn btn-secondary" onclick="saveGeminiModel()"><i class="ti ti-check"></i> Model Ayarını Kaydet</button>
         </div>
       </div>
 
@@ -1560,13 +1507,27 @@ Kurallar:
 
 async function geminiChat(userMsg, cozum, imageBase64, mimeType) {
   const { isim, sinavTuru } = STATE.profile;
-  const history = STATE.chatHistory.map(m => `${m.role === 'user' ? isim : 'Asistan'}: ${m.content}`).join('\n');
-  const sysPrompt = `Sen ${sinavTuru} sınavına hazırlanan ${isim} adlı öğrencinin soru asistanısın.
-Daha önce çözülmüş bir soru hakkında öğrenci soru soruyor.
-Daha önce üretilen çözüm: ${JSON.stringify(cozum)}
-Sohbet geçmişi:\n${history}
-Öğrencinin yeni sorusu: ${userMsg}
-Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, baştan tekrar etme.`;
+  const history = STATE.chatHistory
+    .slice(-8) // son 8 mesaj yeterli
+    .map(m => `${m.role === 'user' ? isim : 'Asistan'}: ${m.content}`)
+    .join('\n');
+
+  const sysPrompt = `Sen bir soru asistanısın. Öğrencinin adı ${isim}${sinavTuru ? ', ' + sinavTuru + ' sınavına hazırlanıyor' : ''}.
+
+Çözülen soru bilgisi: ${JSON.stringify(cozum)}
+
+Önceki mesajlar:
+${history}
+
+${isim} şunu soruyor: ${userMsg}
+
+Kurallar:
+- Türkçe yaz
+- Doğal ve samimi bir dil kullan, resmi olma
+- Soruyu tam olarak yanıtla, cümleleri yarıda kesme
+- Sadece sorulan şeyi açıkla
+- Gereksiz giriş/kapanış cümleleri ekleme
+- Yanıt için yeterli uzunluğu kullan, ne çok kısa ne gereksiz uzun`;
 
   const parts = [];
   if (imageBase64) parts.push({ inline_data: { mime_type: mimeType, data: imageBase64 } });
@@ -1574,68 +1535,23 @@ Kısa, anlaşılır ve Türkçe yanıt ver. Sadece sorulan yeri açıkla, başta
 
   const body = {
     contents: [{ parts }],
-    generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+    generationConfig: { temperature: 0.5, maxOutputTokens: 2048 }
   };
   const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });
   if (!res.ok) {
     let detail = '';
-    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
+    try { const e = await res.json(); detail = e?.error?.message ? ' — ' + e.error.message : ''; } catch {}
     throw new Error(`Gemini ${res.status}${detail}`);
   }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
 }
 
-async function geminiAnalizChat(userMsg) {
-  const { isim, sinavTuru } = STATE.profile;
-  const a = STATE.analitik;
-  const history = STATE.chatHistory.map(m =>
-    `${m.role === 'user' ? isim : 'Koç'}: ${m.content}`
-  ).join('\n');
-
-  const analizJson = JSON.stringify({
-    toplamSoru: a?.toplamSoru || 0,
-    dersler: a?.dersler || {},
-    oturumGecmisi: a?.oturumGecmisi?.slice(-7) || []
-  });
-
-  const sysPrompt = `Sen deneyimli bir ${sinavTuru || 'sınav'} koçusun. Öğrencinin adı ${isim}.
-Aşağıdaki istatistikler öğrencinin arşivlediği sorulara ait analiz verileridir:
-${analizJson}
-
-Sohbet geçmişi:
-${history}
-
-Öğrencinin mesajı: ${userMsg}
-
-Talimatlar:
-- Profesyonel ama sıcak bir sınav koçu gibi davran
-- Verilere dayalı, spesifik ve kişiselleştirilmiş tavsiyeler ver
-- Zayıf konulara dikkat çek, güçlü yönleri tebrik et
-- Somut çalışma önerileri sun (örn. "Bu hafta integrali günde 3 soru ile pekiştir")
-- Öğrenciyi motive et ama gerçekçi ol
-- Türkçe yaz, kısa ve net paragraflar kullan`;
-
-  const body = {
-    contents: [{ parts: [{ text: sysPrompt }] }],
-    generationConfig: { temperature: 0.6, maxOutputTokens: 1024 }
-  };
-
-  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    let detail = '';
-    try { const errJson = await res.json(); detail = errJson?.error?.message ? ' — ' + errJson.error.message : ''; } catch {}
-    throw new Error(`Gemini ${res.status}${detail}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
-}
-
-
+// ════════════════════════════════════════════════════
+// ── SETUP
+// ════════════════════════════════════════════════════
 function showSetupError(stepId, msg) {
   const el = document.getElementById(stepId);
   if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
@@ -1819,28 +1735,25 @@ function showScreen(id) {
 
 function navigate(page) {
   STATE.currentPage = page;
-  // Show/hide pages within the app screen
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
   const pg = document.getElementById(`page-${page}`);
   if (pg) pg.style.display = 'block';
 
-  // Update nav active states
   document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.screen === page);
   });
 
-  // Chatbot FAB: analiz sayfasında göster (koç modu), diğerlerinde gizle
-  // Soru detayında ayrıca openSoruChat() çağrıldığında gösterilir
+  // FAB yönetimi
   if (page === 'analiz') {
     showChatFab('Eğitim Koçun');
+    // Analiz sayfasına geçince soru modunu sıfırla
+    if (chatbotMode === 'soru') { closeChatbot(); chatbotMode = null; }
+  } else if (page === 'detay') {
+    // openQuestion zaten showChatFab çağırır
   } else {
-    // Detay sayfasından ayrılınca paneli kapat ve FAB'ı gizle
-    if (page !== 'detay') {
-      hideChatFab();
-    }
+    hideChatFab();
   }
 
-  // Load page data
   if (page === 'dashboard') renderDashboard();
   if (page === 'arsiv') renderArchive();
   if (page === 'analiz') renderAnaliz();
@@ -1851,10 +1764,8 @@ function navigate(page) {
 function showApp() {
   showScreen('screen-app');
   updateSidebar();
+  _applyChatPos(getChatPosition());
   navigate('dashboard');
-  // Chat pozisyonunu uygula (kayıtlı tercih)
-  applyChatPosition(getChatPosition());
-  // Mobil cihazlarda kamera butonunu göster
   if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
     document.querySelectorAll('.camera-btn').forEach(b => b.style.display = 'inline-flex');
   }
@@ -2179,13 +2090,12 @@ async function openQuestion(id) {
   STATE.currentQuestion = q;
   STATE.chatHistory = [];
 
-  // Chatbot sıfırla (yeni soru)
+  // Chatbot sıfırla
   chatbotMode = null;
   chatbotImageBase64 = null;
   chatbotImageMime = null;
   closeChatbot();
 
-  // Increment view count
   q.goruntulemeSayisi = (q.goruntulemeSayisi || 0) + 1;
   q.sonGoruntuleme = now();
   saveQuestionToFile(q);
@@ -2193,7 +2103,7 @@ async function openQuestion(id) {
   navigate('detay');
   renderDetail(q);
 
-  // FAB göster (Soru Sor modu)
+  // Soru detayında FAB göster
   showChatFab('Soru Sor');
 }
 
@@ -2298,21 +2208,20 @@ function renderDetail(q) {
     <button class="btn btn-amber" onclick="setDevam()" ${!isLearned ? 'disabled' : ''} id="btnDevam">
       <i class="ti ti-refresh"></i> Devam Ediyorum
     </button>
-    <button class="btn btn-secondary" onclick="openSoruChat()">
-      <i class="ti ti-message-circle"></i> Soru Sor
+    <button class="btn btn-secondary" onclick="incrementTekrar()" id="btnTekrar">
+      <i class="ti ti-repeat"></i> Tekrar Ettim
+      <span style="font-size:11px; background:rgba(0,0,0,0.08); border-radius:10px; padding:1px 6px; margin-left:2px;" id="repeatCount">${q.tekrarSayisi||0}</span>
     </button>
-    <button class="btn btn-secondary" onclick="openEditModal()" title="Ders/Konu düzenle">
+    <button class="btn btn-secondary" onclick="openEditModal()">
       <i class="ti ti-edit"></i> Düzenle
+    </button>
+    <button class="btn btn-secondary" onclick="openDeleteModal()" style="color:var(--red); border-color:#FCA5A5;">
+      <i class="ti ti-trash"></i> Soruyu Sil
     </button>
     <div class="action-spacer"></div>
     <div class="counters">
       <span class="counter-item"><i class="ti ti-eye"></i> <span id="viewCount">${q.goruntulemeSayisi}</span></span>
-      <span class="counter-item"><i class="ti ti-refresh"></i> <span id="repeatCount">${q.tekrarSayisi}</span></span>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="incrementTekrar()"><i class="ti ti-refresh"></i> Tekrar Ettim</button>
-    <button class="btn btn-sm" style="color:var(--red); border:1px solid #FCA5A5;" onclick="openDeleteModal()" title="Soruyu sil">
-      <i class="ti ti-trash"></i>
-    </button>
   `;
 
   // Drive görselini yükle (token ile) ve lightbox'a bağla
@@ -2449,197 +2358,140 @@ async function confirmDelete() {
 }
 
 // ════════════════════════════════════════════════════
+// ── CHAT
+// ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
 // ── FLOATING CHATBOT
 // ════════════════════════════════════════════════════
-
-// Chatbot modu: 'soru' | 'analiz'
-let chatbotMode = null;
+let chatbotMode = null;       // 'soru' | 'analiz'
 let chatbotImageBase64 = null;
 let chatbotImageMime = null;
 
-// --- Pozisyon yönetimi ---
-function getChatPosition() {
-  return localStorage.getItem('sa_chat_pos') || 'right';
-}
-
+// Pozisyon
+function getChatPosition() { return localStorage.getItem('sa_chat_pos') || 'right'; }
 function setChatPosition(side) {
   localStorage.setItem('sa_chat_pos', side);
-  applyChatPosition(side);
-  // Profil butonlarını güncelle
-  const rBtn = document.getElementById('chatPosRightBtn');
-  const lBtn = document.getElementById('chatPosLeftBtn');
-  if (rBtn) rBtn.style.fontWeight = side === 'right' ? '700' : '';
-  if (lBtn) lBtn.style.fontWeight = side === 'left' ? '700' : '';
+  _applyChatPos(side);
+  const r = document.getElementById('chatPosRightBtn');
+  const l = document.getElementById('chatPosLeftBtn');
+  if (r) r.style.fontWeight = side === 'right' ? '700' : '';
+  if (l) l.style.fontWeight = side === 'left' ? '700' : '';
 }
-
-function applyChatPosition(side) {
+function _applyChatPos(side) {
   const fab = document.getElementById('chatFab');
   const panel = document.getElementById('chatbotPanel');
   if (!fab || !panel) return;
-  if (side === 'left') {
-    fab.classList.add('pos-left');
-    panel.classList.add('pos-left');
-  } else {
-    fab.classList.remove('pos-left');
-    panel.classList.remove('pos-left');
-  }
+  fab.classList.toggle('pos-left', side === 'left');
+  panel.classList.toggle('pos-left', side === 'left');
+}
+function switchChatSide() {
+  setChatPosition(getChatPosition() === 'right' ? 'left' : 'right');
 }
 
-function switchChatSide(e) {
-  if (e) e.stopPropagation();
-  const current = getChatPosition();
-  setChatPosition(current === 'right' ? 'left' : 'right');
-}
-
-// --- FAB görünürlüğü ---
+// FAB göster/gizle
 function showChatFab(label) {
   const fab = document.getElementById('chatFab');
   const lbl = document.getElementById('chatFabLabel');
   if (!fab) return;
   fab.style.display = 'flex';
-  if (lbl) lbl.textContent = label || 'Soru Sor';
-  applyChatPosition(getChatPosition());
+  if (lbl) lbl.textContent = label || 'Asistan';
+  _applyChatPos(getChatPosition());
 }
-
 function hideChatFab() {
   const fab = document.getElementById('chatFab');
   if (fab) fab.style.display = 'none';
   closeChatbot();
 }
 
-// --- Panel aç/kapat ---
+// Panel aç/kapat
 function toggleChatbot() {
   const panel = document.getElementById('chatbotPanel');
   if (!panel) return;
-  if (panel.classList.contains('open')) {
-    closeChatbot();
-  } else {
-    // Analiz sayfasındaysa ve henüz analiz modu açılmadıysa direkt aç
-    if (STATE.currentPage === 'analiz' && chatbotMode !== 'analiz') {
-      openAnalizChat();
-    } else if (STATE.currentPage === 'detay' && chatbotMode !== 'soru') {
-      openSoruChat();
-    } else {
-      panel.classList.add('open');
-      setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
-    }
-  }
+  if (panel.classList.contains('open')) { closeChatbot(); return; }
+  if (STATE.currentPage === 'analiz' && chatbotMode !== 'analiz') { openAnalizChat(); return; }
+  if (STATE.currentPage === 'detay' && chatbotMode !== 'soru') { openSoruChat(); return; }
+  panel.classList.add('open');
+  setTimeout(() => document.getElementById('chatbotInput').focus(), 120);
 }
-
 function closeChatbot() {
   const panel = document.getElementById('chatbotPanel');
   if (panel) panel.classList.remove('open');
 }
-
 function clearChatbot() {
+  STATE.chatHistory = [];
   const msgs = document.getElementById('chatbotMessages');
   if (msgs) msgs.innerHTML = '';
-  STATE.chatHistory = [];
-  chatbotImageBase64 = null;
-  chatbotImageMime = null;
 }
 
-// --- SORU modu ---
+// Soru modu
 function openSoruChat() {
   const q = STATE.currentQuestion;
   if (!q) return;
-
   chatbotMode = 'soru';
   STATE.chatHistory = [];
-  chatbotImageBase64 = null;
-  chatbotImageMime = null;
+  chatbotImageBase64 = null; chatbotImageMime = null;
 
-  // Header
+  const ctxBar = document.getElementById('chatbotContextBar');
+  if (ctxBar) { ctxBar.textContent = `📌 ${q.ders} — ${q.konu}`; ctxBar.style.display = 'block'; }
   document.getElementById('chatbotHeaderIcon').innerHTML = '<i class="ti ti-message-circle"></i>';
   document.getElementById('chatbotHeaderTitle').textContent = 'Soru Asistanı';
   document.getElementById('chatbotHeaderSub').textContent = `${q.ders} — ${q.konu}`;
-  document.getElementById('chatbotContextBar').textContent = `📌 ${q.cozum?.ozet || 'Soru analizi'}`;
 
-  // İlk mesaj
   const msgs = document.getElementById('chatbotMessages');
-  msgs.innerHTML = `<div class="chatbot-bubble ai">Merhaba! <strong>${q.ders} — ${q.konu}</strong> sorusu hakkında aklında takılan bir şey mi var? Sormaktan çekinme 😊</div>`;
+  msgs.innerHTML = `<div class="chatbot-bubble ai">Bu soru hakkında aklında takılan bir şey var mı?</div>`;
 
-  // Sorunun görselini arka planda yükle (Gemini'ye gönderilecek)
+  // Sorunun görselini arka planda yükle
   if (q.resimDriveId) {
     ensureToken().then(() =>
       fetch(`${DRIVE_API}/files/${q.resimDriveId}?alt=media`, {
         headers: { Authorization: `Bearer ${STATE.accessToken}` }
       })
     ).then(r => r.blob()).then(blob => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        chatbotImageBase64 = e.target.result.split(',')[1];
-        chatbotImageMime = blob.type;
-      };
-      reader.readAsDataURL(blob);
+      const rd = new FileReader();
+      rd.onload = e => { chatbotImageBase64 = e.target.result.split(',')[1]; chatbotImageMime = blob.type; };
+      rd.readAsDataURL(blob);
     }).catch(() => {});
   }
 
   showChatFab('Soru Sor');
-  // Otomatik aç
-  const panel = document.getElementById('chatbotPanel');
-  if (panel) {
-    panel.classList.add('open');
-    setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
-  }
+  document.getElementById('chatbotPanel').classList.add('open');
+  setTimeout(() => document.getElementById('chatbotInput').focus(), 120);
 }
 
-// --- ANALİZ modu ---
+// Analiz modu
 function openAnalizChat() {
   chatbotMode = 'analiz';
   STATE.chatHistory = [];
-  chatbotImageBase64 = null;
-  chatbotImageMime = null;
+  chatbotImageBase64 = null; chatbotImageMime = null;
+
+  const ctxBar = document.getElementById('chatbotContextBar');
+  if (ctxBar) { ctxBar.style.display = 'none'; }
+  document.getElementById('chatbotHeaderIcon').innerHTML = '<i class="ti ti-brain"></i>';
+  document.getElementById('chatbotHeaderTitle').textContent = 'Eğitim Koçun';
+  document.getElementById('chatbotHeaderSub').textContent = STATE.profile?.isim || '';
 
   const a = STATE.analitik;
   const isim = STATE.profile?.isim || 'Öğrenci';
-  const sinavTuru = STATE.profile?.sinavTuru || '';
-
-  // Header
-  document.getElementById('chatbotHeaderIcon').innerHTML = '<i class="ti ti-brain"></i>';
-  document.getElementById('chatbotHeaderTitle').textContent = 'Eğitim Koçun';
-  document.getElementById('chatbotHeaderSub').textContent = `${isim} · ${sinavTuru} Analiz`;
-  document.getElementById('chatbotContextBar').textContent = `📊 ${a?.toplamSoru || 0} soru analiz ediliyor — koçun hazır!`;
-
-  // Koç açılış mesajı
   const msgs = document.getElementById('chatbotMessages');
-  const ozetMetin = buildAnalizOzeti(a, isim, sinavTuru);
-  msgs.innerHTML = `<div class="chatbot-bubble ai">${ozetMetin}</div>`;
-  STATE.chatHistory.push({ role: 'assistant', content: ozetMetin });
+
+  // Kısa, doğal açılış
+  let acilis = `Merhaba ${isim}! `;
+  if (!a || !a.toplamSoru) {
+    acilis += 'Henüz arşivde soru yok. Nasıl yardımcı olabilirim?';
+  } else {
+    const total = a.toplamSoru;
+    const ogr = Object.values(a.dersler || {}).reduce((s,d) => s+(d.ogrenildi||0), 0);
+    acilis += `${total} soruna baktım, ${ogr} tanesi öğrenildi. Nelerden konuşalım?`;
+  }
+  msgs.innerHTML = `<div class="chatbot-bubble ai">${acilis}</div>`;
+  STATE.chatHistory.push({ role: 'assistant', content: acilis });
 
   showChatFab('Eğitim Koçun');
-  const panel = document.getElementById('chatbotPanel');
-  if (panel) {
-    panel.classList.add('open');
-    setTimeout(() => document.getElementById('chatbotInput').focus(), 150);
-  }
+  document.getElementById('chatbotPanel').classList.add('open');
+  setTimeout(() => document.getElementById('chatbotInput').focus(), 120);
 }
 
-function buildAnalizOzeti(a, isim, sinavTuru) {
-  if (!a || a.toplamSoru === 0) {
-    return `Merhaba <strong>${isim}</strong>! Henüz hiç soru yüklememişsin. Arşive soru ekledikten sonra birlikte analiz edebiliriz 🎯`;
-  }
-  const total = a.toplamSoru;
-  const ogrenildi = Object.values(a.dersler || {}).reduce((s, d) => s + (d.ogrenildi || 0), 0);
-  const devam = total - ogrenildi;
-  const oran = total > 0 ? Math.round((ogrenildi / total) * 100) : 0;
-
-  let enCokDers = '', enCokSayisi = 0;
-  let enZayif = '', enZayifOran = 101;
-  for (const [ders, data] of Object.entries(a.dersler || {})) {
-    if (data.toplam > enCokSayisi) { enCokSayisi = data.toplam; enCokDers = ders; }
-    const dr = data.toplam > 0 ? (data.ogrenildi / data.toplam) * 100 : 0;
-    if (dr < enZayifOran) { enZayifOran = dr; enZayif = ders; }
-  }
-
-  return `Merhaba <strong>${isim}</strong>! ${sinavTuru ? `<strong>${sinavTuru}</strong> hazırlık sürecini` : 'Çalışma sürecini'} birlikte değerlendirelim 🎯<br><br>
-📚 Toplam <strong>${total}</strong> soru arşivledin. Bunların <strong>${ogrenildi}</strong>'ini (<strong>%${oran}</strong>) tamamladın, <strong>${devam}</strong> soru hâlâ devam ediyor.<br><br>
-${enCokDers ? `🔥 En çok çalıştığın alan: <strong>${enCokDers}</strong> (${enCokSayisi} soru)<br>` : ''}
-${enZayif && enZayif !== enCokDers ? `⚠️ Dikkat gerektiren alan: <strong>${enZayif}</strong> (tamamlanma oranı %${Math.round(enZayifOran)})<br><br>` : '<br>'}
-Sana nasıl yardımcı olabilirim? Zayıf konularını konuşalım mı, yoksa önümüzdeki hafta için bir çalışma planı hazırlayalım mı?`;
-}
-
-// --- Mesaj gönder ---
+// Mesaj gönder
 function chatbotKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatbotMessage(); }
 }
@@ -2648,30 +2500,23 @@ async function sendChatbotMessage() {
   const input = document.getElementById('chatbotInput');
   const msg = input.value.trim();
   if (!msg) return;
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
 
   const msgs = document.getElementById('chatbotMessages');
-  msgs.innerHTML += `<div class="chatbot-bubble user">${escapeHtml(msg)}</div>`;
-
+  msgs.innerHTML += `<div class="chatbot-bubble user">${escHtml(msg)}</div>`;
   const thinking = document.createElement('div');
   thinking.className = 'chatbot-bubble ai thinking';
-  thinking.textContent = 'Düşünüyor...';
+  thinking.textContent = '...';
   msgs.appendChild(thinking);
   msgs.scrollTop = msgs.scrollHeight;
-
   STATE.chatHistory.push({ role: 'user', content: msg });
 
   try {
     let reply;
-    if (chatbotMode === 'analiz') {
-      reply = await geminiAnalizChat(msg);
-    } else {
-      const q = STATE.currentQuestion;
-      reply = await geminiChat(msg, q?.cozum, chatbotImageBase64, chatbotImageMime);
-    }
+    if (chatbotMode === 'analiz') reply = await geminiAnalizChat(msg);
+    else { const q = STATE.currentQuestion; reply = await geminiChat(msg, q?.cozum, chatbotImageBase64, chatbotImageMime); }
     thinking.remove();
-    msgs.innerHTML += `<div class="chatbot-bubble ai">${reply}</div>`;
+    msgs.innerHTML += `<div class="chatbot-bubble ai">${reply.replace(/\n/g,'<br>')}</div>`;
     STATE.chatHistory.push({ role: 'assistant', content: reply });
   } catch (err) {
     thinking.remove();
@@ -2680,8 +2525,71 @@ async function sendChatbotMessage() {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Mobil tree toggle
+function toggleMobileTree() {
+  const toggle = document.getElementById('treeMobileToggle');
+  const body = document.getElementById('treeMobileBody');
+  if (!toggle || !body) return;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  toggle.classList.toggle('open', !isOpen);
+}
+
+async function geminiAnalizChat(userMsg) {
+  const { isim, sinavTuru } = STATE.profile;
+  const a = STATE.analitik;
+  const history = STATE.chatHistory
+    .slice(-10)
+    .map(m => `${m.role === 'user' ? isim : 'Koç'}: ${m.content}`)
+    .join('\n');
+
+  // Özet veri — fazla detay verme, koç bağlamı anlasın yeter
+  const ozet = {
+    toplamSoru: a?.toplamSoru || 0,
+    dersler: Object.entries(a?.dersler || {}).map(([ders, d]) => ({
+      ders,
+      toplam: d.toplam,
+      ogrenildi: d.ogrenildi,
+      devam: d.devam,
+      konular: Object.entries(d.konular || {}).map(([k, v]) => `${k}(${v.ogrenildi||0}/${v.toplam||0})`)
+    })),
+    sonHafta: (a?.oturumGecmisi || []).slice(-7).reduce((s, o) => s + (o.yuklenen || 0), 0)
+  };
+
+  const sysPrompt = `Sen bir sınav koçusun. Öğrencinin adı ${isim}${sinavTuru ? ', ' + sinavTuru + ' hazırlığında' : ''}.
+
+Öğrencinin arşiv istatistikleri:
+${JSON.stringify(ozet, null, 2)}
+
+Önceki mesajlar:
+${history}
+
+${isim}: ${userMsg}
+
+Talimatlar:
+- Doğal, samimi ve profesyonel bir koç gibi konuş
+- Öğrencinin sormadığı konularda ders verme, sorulan şeye odaklan
+- Verileri gerektiğinde kullan ama her cümlede belirtme
+- Öğrencinin tüm sürecini bilmiyorsun, o ne söylerse ona göre yardım et
+- Yanıtı MUTLAKA tamamla, cümleyi yarıda bırakma
+- Türkçe yaz, kısa paragraflar`;
+
+  const body = {
+    contents: [{ parts: [{ text: sysPrompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+  };
+  const res = await fetch(`${geminiApiUrl()}?key=${STATE.geminiKey}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const e = await res.json(); detail = e?.error?.message ? ' — ' + e.error.message : ''; } catch {}
+    throw new Error(`Gemini ${res.status}${detail}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Yanıt alınamadı.';
 }
 
 // ════════════════════════════════════════════════════
@@ -2789,12 +2697,12 @@ function renderProfil() {
   document.getElementById('profileSinavTuru').value = STATE.profile.sinavTuru;
   document.getElementById('profileGeminiModel').value = STATE.geminiModel || '';
   document.getElementById('defaultModelHint').textContent = DEFAULT_GEMINI_MODEL;
-  // Chat pozisyon butonlarını güncelle
+  // Konum butonlarını aktif olanı vurgula
   const side = getChatPosition();
-  const rBtn = document.getElementById('chatPosRightBtn');
-  const lBtn = document.getElementById('chatPosLeftBtn');
-  if (rBtn) rBtn.style.fontWeight = side === 'right' ? '700' : '';
-  if (lBtn) lBtn.style.fontWeight = side === 'left' ? '700' : '';
+  const r = document.getElementById('chatPosRightBtn');
+  const l = document.getElementById('chatPosLeftBtn');
+  if (r) r.style.fontWeight = side === 'right' ? '700' : '';
+  if (l) l.style.fontWeight = side === 'left' ? '700' : '';
 }
 
 function saveGeminiModel() {
